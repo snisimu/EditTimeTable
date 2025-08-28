@@ -18,41 +18,83 @@ const slotSettings: [string, number[]][] =
       , 1
       ]
     ]
+  , ["Tue",
+      [ 2
+      , 1
+      ]
+    ]
+  , ["Tue",
+      [ 2
+      , 1
+      ]
+    ]
+  , ["Tue",
+      [ 2
+      , 1
+      ]
+    ]
   ]
 const classAlls: string[] = ["A", "B"];
 
+const widthSlot = 100;
+const widthClass = 70;
+
 const MainContent: React.FC = () => {
-  const Day: React.FC = () => {
+  const Day: React.FC<{slotDays: number[]}> = ({ slotDays }) => {
     return (
       <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-        <Pane display="flex" flexDirection="row">
-          <Slot label="item1" />
-          <Slot label="item2" />
-        </Pane>
-        <Pane display="flex" flexDirection="row">
-          <Slot label="item3" />
-        </Pane>
+        { slotDays.map(l => (
+          <Pane display="flex" flexDirection="row">
+            { Array.from({ length: l }, (_, i) => i + 1).map(i => (
+              <Slot label={`item${i}`} />
+            ))}
+          </Pane>
+        ))}
       </Pane>
     );
   }
-  const Class: React.FC = () => {
+  const Class: React.FC<{ cls: string }> = ({ cls }) => {
     return (
       <Pane display="flex" flexDirection="row" gap={majorScale(3)}>
-        <Day />
-        <Day />
+        <Card paddingTop={10} width={widthClass} style={{textAlign: 'center'}}>
+          <Heading>{cls}</Heading>
+        </Card>
+        { slotSettings.map(slotSetting => (
+          <Day slotDays={slotSetting[1]!} />
+        ))}
       </Pane>
     );
   }
   return (
     <Pane flex={1} overflowY="auto" overflowX="auto" padding={24} display="flex" flexDirection="column" gap={majorScale(2)}>
-        <Class />
-        <Class />
+      <Pane display="flex" flexDirection="row" gap={majorScale(3)}>
+        <Card width={widthClass}>
+          <Heading>　</Heading>
+        </Card>
+        { slotSettings.map(slotSetting => (
+          <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
+            <Pane display="flex" flexDirection="row">
+              <Card width={widthSlot} style={{ textAlign: 'right' }}>
+                {slotSetting[0]}
+              </Card>
+              {slotSetting[1].map((count, idx) =>
+                Array.from({ length: count }, (_, i) => (
+                  <Card key={`slot-header-${slotSetting[0]}-${idx}-${i}`} width={widthSlot} />
+                ))
+              )}
+            </Pane>
+          </Pane>
+        ))}
+      </Pane>
+      { classAlls.map(cls => (
+        <Class cls={cls} />
+      ))}
     </Pane>
   );
 }
 
 const Slot: React.FC<{ label: string }> = ({ label }) => (
-  <Card elevation={1} padding={majorScale(1)} width={100}>
+  <Card elevation={1} padding={majorScale(1)} width={widthSlot}>
     <Paragraph>{label}</Paragraph>
   </Card>
 );
