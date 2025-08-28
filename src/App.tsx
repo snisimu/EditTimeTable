@@ -22,56 +22,64 @@ const App: React.FC = () => {
   }
 
   return (
-    <Pane
-      display="flex"
-      alignItems="center"
-      justifyContent="center"
-      height="100vh"
-      background="tint1"
-    >
-      <Card
-        backgroundColor="white"
-        elevation={2}
-        padding={majorScale(4)}
-        width={400}
+    <Pane display="flex" flexDirection="column" height="100vh">
+      {/* Top Pane/Header */}
+      <Pane
+        background="tint2"
+        padding={16}
+        elevation={1}
+        display="flex"
+        alignItems="center"
       >
-        <Pane marginBottom={majorScale(3)}>
-          <Heading size={600} marginBottom={majorScale(2)}>
-            Welcome to Evergreen UI
-          </Heading>
-          <Paragraph color="muted">
-            This is a minimum TypeScript React app using Evergreen UI components.
-          </Paragraph>
+        <Heading size={600}>Top Pane</Heading>
+      </Pane>
+      {/* Main Area: Sidebar + Content */}
+      <Pane display="flex" flex={1} minHeight={0}>
+        {/* Sidebar */}
+        <Pane
+          width={240}
+          background="tint1"
+          display="flex"
+          flexDirection="column"
+          padding={16}
+          elevation={0}
+        >
+          <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
+          <Button marginBottom={majorScale(1)}>Menu 1</Button>
+          <Button marginBottom={majorScale(1)}>Menu 2</Button>
+          <Button>Menu 3</Button>
         </Pane>
-
-        <Pane marginBottom={majorScale(3)}>
-          <TextInput
-            placeholder="Enter your name..."
-            value={name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-            width="100%"
-            marginBottom={majorScale(2)}
-          />
-          <Button
-            appearance="primary"
-            onClick={handleSubmit}
-            disabled={!name.trim()}
-            width="100%"
-          >
-            Say Hello
-          </Button>
+        {/* Main Content */}
+        <Pane flex={1} overflowY="auto" overflowX="auto" padding={24}>
+          {/* Main content goes here */}
+          <Card elevation={1} padding={majorScale(3)} minWidth={600} minHeight={400}>
+            <Heading size={400} marginBottom={majorScale(2)}>Welcome!</Heading>
+            <Paragraph marginBottom={majorScale(2)}>
+              This is the main content area. Add more content here to test horizontal and vertical scrolling.
+            </Paragraph>
+            <TextInput
+              placeholder="Enter your name..."
+              value={name}
+              onChange={e => setName(e.target.value)}
+              marginBottom={majorScale(2)}
+            />
+            <Button appearance="primary" onClick={handleSubmit}>Submit</Button>
+            {showAlert && (
+              <Alert intent="success" marginTop={majorScale(2)}>
+                Hello, {name}!
+              </Alert>
+            )}
+            {/* Example wide content for horizontal scroll */}
+            <Pane marginTop={majorScale(2)} width={1200} height={200} background="tint2" display="flex" alignItems="center" justifyContent="center">
+              <Heading size={300}>This is a wide content area to demonstrate horizontal scrolling.</Heading>
+            </Pane>
+            {/* Example tall content for vertical scroll */}
+            <Pane marginTop={majorScale(2)} height={600} background="tint1" display="flex" alignItems="center" justifyContent="center">
+              <Heading size={300}>This is a tall content area to demonstrate vertical scrolling.</Heading>
+            </Pane>
+          </Card>
         </Pane>
-
-        {showAlert && (
-          <Alert
-            intent="success"
-            title={`Hello, ${name}!`}
-            marginBottom={majorScale(2)}
-          >
-            Welcome to the Evergreen UI world!
-          </Alert>
-        )}
-      </Card>
+      </Pane>
     </Pane>
   )
 }
