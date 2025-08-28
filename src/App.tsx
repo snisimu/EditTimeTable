@@ -43,40 +43,29 @@ const App: React.FC = () => {
           flexDirection="column"
           padding={16}
           elevation={0}
+          overflowY="auto"
+          minHeight={0}
         >
           <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-          <Button marginBottom={majorScale(1)}>Menu 1</Button>
-          <Button marginBottom={majorScale(1)}>Menu 2</Button>
-          <Button>Menu 3</Button>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
+            <Card padding={majorScale(3)} background="yellowTint">content</Card>
         </Pane>
         {/* Main Content */}
         <Pane flex={1} overflowY="auto" overflowX="auto" padding={24}>
           {/* Main content goes here */}
-          <Card elevation={1} padding={majorScale(3)} minWidth={600} minHeight={400}>
-            <Heading size={400} marginBottom={majorScale(2)}>Welcome!</Heading>
-            <Paragraph marginBottom={majorScale(2)}>
-              This is the main content area. Add more content here to test horizontal and vertical scrolling.
-            </Paragraph>
-            <TextInput
-              placeholder="Enter your name..."
-              value={name}
-              onChange={e => setName(e.target.value)}
-              marginBottom={majorScale(2)}
-            />
-            <Button appearance="primary" onClick={handleSubmit}>Submit</Button>
-            {showAlert && (
-              <Alert intent="success" marginTop={majorScale(2)}>
-                Hello, {name}!
-              </Alert>
-            )}
-            {/* Example wide content for horizontal scroll */}
-            <Pane marginTop={majorScale(2)} width={1200} height={200} background="tint2" display="flex" alignItems="center" justifyContent="center">
-              <Heading size={300}>This is a wide content area to demonstrate horizontal scrolling.</Heading>
-            </Pane>
-            {/* Example tall content for vertical scroll */}
-            <Pane marginTop={majorScale(2)} height={600} background="tint1" display="flex" alignItems="center" justifyContent="center">
-              <Heading size={300}>This is a tall content area to demonstrate vertical scrolling.</Heading>
-            </Pane>
+          <Card elevation={1} padding={majorScale(1)} width={100}>
+            <Heading>X</Heading>
+            <Paragraph>Y</Paragraph>
           </Card>
         </Pane>
       </Pane>
