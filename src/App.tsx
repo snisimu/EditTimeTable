@@ -45,9 +45,9 @@ const App: React.FC = () => {
     <Pane display="flex" flexDirection="column" height="100vh">
       {/* Top Pane/Header */}
       <Pane
-        background="tint1"
+        background="green100"
         padding={16}
-        elevation={1}
+        elevation={2}
         display="flex"
         alignItems="center"
       >
@@ -71,7 +71,7 @@ const MainArea: React.FC = () => {
         display="flex"
         flexDirection="column"
         padding={majorScale(2)}
-        elevation={1}
+        elevation={2}
         overflowY="auto"
         minHeight={0}
         gap={majorScale(4)}
