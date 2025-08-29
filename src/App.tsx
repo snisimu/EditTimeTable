@@ -24,6 +24,7 @@ const classAlls: string[] = ["A", "B"];
 const heightSlot = 40;
 const heightDay = 20;
 const gapClass = majorScale(1);
+const paddingDay = majorScale(1);
 
 // 
 
@@ -40,8 +41,8 @@ const MainContent: React.FC = () => {
         display="flex"
         flexDirection="column"
         gap={gapClass}
+        padding={paddingDay}
         background='tint2'
-        padding={majorScale(2)}
         borderRadius={8}
       >
         <Card
@@ -81,21 +82,24 @@ const MainContent: React.FC = () => {
         display="flex"
         flexDirection="column"
         gap={gapClass}
-        padding={majorScale(2)}
+        padding={paddingDay}
       >
-        <Card height={heightDay}>
+        <Card key="topleft" height={heightDay}>
           <Heading>　</Heading>
         </Card>
         { classAlls.map(cls => (
-              <Card
-                key={cls}
-                height={heightSlot}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Heading textAlign="center">{cls}</Heading>
-              </Card>
+          <Card
+            key={cls+"header"}
+            height={heightSlot}
+            minHeight={heightSlot}
+            maxHeight={heightSlot}
+            padding={majorScale(1)}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Heading>{cls}</Heading>
+          </Card>
         ))}
       </Pane>
 
@@ -107,8 +111,13 @@ const MainContent: React.FC = () => {
 }
 
 const Slot: React.FC<{ label: string }> = ({ label }) => (
-  <Card elevation={1} padding={majorScale(1)} width={100} height={heightSlot}>
-    <Paragraph textAlign="center">{label}</Paragraph>
+  <Card
+    height={heightSlot}
+    padding={majorScale(1)}
+    width={80}
+    elevation={1}
+  >
+    <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
   </Card>
 );
 
