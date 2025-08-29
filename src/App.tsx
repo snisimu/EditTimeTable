@@ -18,94 +18,106 @@ const slotSettings: [string, number[]][] =
       , 1
       ]
     ]
-  , ["Tue",
-      [ 2
-      , 1
-      ]
-    ]
-  , ["Tue",
-      [ 2
-      , 1
-      ]
-    ]
-  , ["Tue",
-      [ 2
-      , 1
-      ]
-    ]
   ]
 const classAlls: string[] = ["A", "B"];
 
-const widthSlot = 100;
-const widthClass = 70;
+const heightSlot = 40;
+const heightDay = 20;
+const gapClass = majorScale(1);
+
+// 
+
+const slotPositions: [string, number[][]][] =
+  slotSettings.map(([day, slotNums]) => 
+    [day, slotNums.map(n => Array.from({ length: n }, (_, i) => i + 1))]
+  );
 
 const MainContent: React.FC = () => {
-  const Day: React.FC<{slotDays: number[]}> = ({ slotDays }) => {
+  const Day: React.FC<{slotPositionDay: [string, number[][]]}> = ({slotPositionDay}) => {
+    const [day, pss] = slotPositionDay;
     return (
-      <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-        { slotDays.map(l => (
-          <Pane display="flex" flexDirection="row">
-            { Array.from({ length: l }, (_, i) => i + 1).map(i => (
-              <Slot label={`item${i}`} />
+      <Pane
+        display="flex"
+        flexDirection="column"
+        gap={gapClass}
+        background='tint2'
+        padding={majorScale(2)}
+        borderRadius={8}
+      >
+        <Card
+          height={heightDay}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Heading textAlign="center">{day}</Heading>
+        </Card>
+        { classAlls.map(cls => (
+          <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
+            { pss.map(ps => (
+              <Pane display="flex" flexDirection="row">
+                { ps.map(p => (
+                  <Slot label={`item${p}`} />
+                ))}
+              </Pane>
             ))}
           </Pane>
         ))}
       </Pane>
     );
   }
-  const Class: React.FC<{ cls: string }> = ({ cls }) => {
-    return (
-      <Pane display="flex" flexDirection="row" gap={majorScale(3)}>
-        <Card paddingTop={10} width={widthClass} style={{textAlign: 'center'}}>
-          <Heading>{cls}</Heading>
-        </Card>
-        { slotSettings.map(slotSetting => (
-          <Day slotDays={slotSetting[1]!} />
-        ))}
-      </Pane>
-    );
-  }
+
   return (
-    <Pane flex={1} overflowY="auto" overflowX="auto" padding={24} display="flex" flexDirection="column" gap={majorScale(2)}>
-      <Pane display="flex" flexDirection="row" gap={majorScale(3)}>
-        <Card width={widthClass}>
+    <Pane
+      flex={1}
+      overflowY="auto"
+      overflowX="auto"
+      padding={majorScale(2)}
+      display="flex"
+      flexDirection="row"
+      gap={majorScale(1)}
+    >
+      <Pane
+        display="flex"
+        flexDirection="column"
+        gap={gapClass}
+        padding={majorScale(2)}
+      >
+        <Card height={heightDay}>
           <Heading>　</Heading>
         </Card>
-        { slotSettings.map(slotSetting => (
-          <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-            <Pane display="flex" flexDirection="row">
-              <Card width={widthSlot} style={{ textAlign: 'right' }}>
-                {slotSetting[0]}
+        { classAlls.map(cls => (
+              <Card
+                key={cls}
+                height={heightSlot}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Heading textAlign="center">{cls}</Heading>
               </Card>
-              {slotSetting[1].map((count, idx) =>
-                Array.from({ length: count }, (_, i) => (
-                  <Card key={`slot-header-${slotSetting[0]}-${idx}-${i}`} width={widthSlot} />
-                ))
-              )}
-            </Pane>
-          </Pane>
         ))}
       </Pane>
-      { classAlls.map(cls => (
-        <Class cls={cls} />
+
+      { slotPositions.map(slotPositionDay => (
+        <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} />
       ))}
     </Pane>
   );
 }
 
 const Slot: React.FC<{ label: string }> = ({ label }) => (
-  <Card elevation={1} padding={majorScale(1)} width={widthSlot}>
-    <Paragraph>{label}</Paragraph>
+  <Card elevation={1} padding={majorScale(1)} width={100} height={heightSlot}>
+    <Paragraph textAlign="center">{label}</Paragraph>
   </Card>
 );
 
 const App: React.FC = () => {
-
   return (
     <Pane display="flex" flexDirection="column" height="100vh">
       {/* Top Pane/Header */}
       <Pane
-        background="tint2"
+        background="tint1"
         padding={16}
         elevation={1}
         display="flex"
@@ -113,16 +125,16 @@ const App: React.FC = () => {
       >
         <Heading size={600}>Top Pane</Heading>
       </Pane>
-      {/* Main Area: Sidebar + Content */}
+
+      {/* Sidebar + Content */}
       <Pane display="flex" flex={1} minHeight={0}>
         {/* Sidebar */}
         <Pane
-          width={200}
           background="tint1"
           display="flex"
           flexDirection="column"
-          padding={majorScale(3)}
-          elevation={0}
+          padding={majorScale(2)}
+          elevation={1}
           overflowY="auto"
           minHeight={0}
           gap={majorScale(4)}
@@ -131,7 +143,9 @@ const App: React.FC = () => {
             <Slot label="item7" />
             <Slot label="item8" />
         </Pane>
+
         <MainContent />
+
       </Pane>
     </Pane>
   )
