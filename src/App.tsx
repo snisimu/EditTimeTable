@@ -45,7 +45,7 @@ const App: React.FC = () => {
     <Pane display="flex" flexDirection="column" height="100vh">
       {/* Top Pane/Header */}
       <Pane
-        background="green100"
+        background="blue50"
         padding={16}
         elevation={2}
         display="flex"
