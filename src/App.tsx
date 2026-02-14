@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useRef, useState, useEffect, type PointerEvent } from 'react'
 import
   { Pane
   , Card
@@ -26,6 +26,13 @@ const heightDay = 20;
 const gapClass = majorScale(1);
 const paddingDay = majorScale(1);
 
+type DragState = {
+  pointerId: number;
+  toRectX: number;
+  toRectY: number;
+  el?: HTMLDivElement;
+}
+
 // auxiliary
 
 const slotPositions: (() => [number, number[][]][]) = () => {
@@ -40,7 +47,7 @@ const slotPositions: (() => [number, number[][]][]) = () => {
 
 // components
 
-const App: React.FC = () => {
+export default function App() {
   return (
     <Pane display="flex" flexDirection="column" height="100vh">
       {/* Top Pane/Header */}
@@ -59,8 +66,6 @@ const App: React.FC = () => {
     </Pane>
   )
 }
-
-export default App
 
 const MainArea: React.FC = () => {
   return (
@@ -88,8 +93,71 @@ const MainArea: React.FC = () => {
 }  
 
 const TableArea: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const itemRef = useRef<HTMLDivElement | null>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget as HTMLDivElement; // itemRef.current
+    if (!el) return;
+
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    e.preventDefault();
+
+    // Pointer capture：要素外に出てもmove/upを受け取れる
+    (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+
+    const r = el.getBoundingClientRect();
+
+    // console.log("onPointerDown", { toRectY: e.clientY - r.top });
+    setDrag({
+      pointerId: e.pointerId,
+      toRectX: e.clientX - r.left,
+      toRectY: e.clientY - r.top,
+      el,
+    });
+    setPointer({ x: e.clientX, y: e.clientY });
+    document.body.style.cursor = "grabbing";
+    e.currentTarget.style.cursor = "grabbing";
+    // updateAutoScrollSpeed(e.clientX, e.clientY);
+  }
+
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    setPointer({ x: e.clientX, y: e.clientY });
+    // updateAutoScrollSpeed(e.clientX, e.clientY);
+    console.log("onPointerMove", { eclientY: e.clientY });
+  }
+
+  const endDrag = () => {
+    if (drag?.el) drag.el.style.cursor = "grab";
+    setDrag(null);
+    setPointer(null);
+    document.body.style.cursor = "";
+    // stopAutoScroll();
+  };
+
+  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    endDrag();
+  }
+
+  const onPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+    if (!drag) return;
+    if (e.pointerId !== drag.pointerId) return;
+    endDrag();
+  };
+
   return (
     <Pane
+      ref={containerRef}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       flex={1}
       overflowY="auto"
       overflowX="auto"
@@ -128,6 +196,42 @@ const TableArea: React.FC = () => {
       { slotPositions().map(slotPositionDay => (
         <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} />
       ))}
+
+      <div
+        ref={itemRef}
+        onPointerDown={onPointerDown}
+        // onContextMenu={onContextMenu}
+        style={{
+          border: "solid",
+          padding: 10,
+          width: 80,
+          height: 30,
+          textAlign: "center",
+          cursor: "grab",
+        }}
+      >
+        drag me
+      </div>
+
+      {/* ghost */}
+      {drag && pointer && (
+        <div
+          style={{
+            position: "fixed",
+            top: pointer.y - drag.toRectY,
+            left: pointer.x - drag.toRectX,
+            border: "solid",
+            padding: 10,
+            width: 80,
+            height: 30,
+            textAlign: "center",
+            background: "lightgray",
+            pointerEvents: "none",
+          }}
+        >
+          dragging
+        </div>
+      )}
 
     </Pane>
   );
