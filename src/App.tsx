@@ -19,7 +19,7 @@ const slotSettings: [string, number[]][] =
       ]
     ]
   ]
-const classAlls: string[] = ["A", "B", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C"];
+const classAlls: string[] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"];
 
 const heightSlot = 40;
 const widthSlot = 80;
@@ -415,7 +415,7 @@ const MainArea: React.FC<{
             { pIdxss().map(([i, ps]) => (
               <Pane display="flex" flexDirection="row">
                 { ps.map(p => (
-                  <Slot label={cls + d + i + p} />
+                  <Slot label={cls + d + i + p + ":id"} />
                 ))}
               </Pane>
             ))}
@@ -443,7 +443,7 @@ const MainArea: React.FC<{
           fontSize="small"
           color={dragging ? "silver" : "black"}
         >
-          {label}
+          {label.split(":")[0]}
         </Paragraph>
       </Card>
     );
@@ -464,7 +464,12 @@ const MainArea: React.FC<{
       background="white"
       pointerEvents="none"
     >
-      <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
+      <Paragraph
+        textAlign="center"
+        fontSize="small"
+      >
+        {label.split(":")[0]}
+      </Paragraph>
     </Card>
   )
 
@@ -569,13 +574,13 @@ const MainArea: React.FC<{
         gap={majorScale(4)}
       >
         <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-          <Slot label="itemX" />
-          <Slot label="itemY" />
-          <Slot label="itemZ" />
-          <Slot label="itemZ" />
-          <Slot label="itemZ" />
-          <Slot label="itemZ" />
-          <Slot label="itemZ" />
+          <Slot label="itemX:" />
+          <Slot label="itemY:" />
+          <Slot label="itemZ:0" />
+          <Slot label="itemZ:1" />
+          <Slot label="itemZ:2" />
+          <Slot label="itemZ:3" />
+          <Slot label="itemZ:4" />
       </Pane>
 
       {/* table area */}
