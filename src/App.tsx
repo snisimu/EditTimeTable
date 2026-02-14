@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type PointerEvent } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import
   { Pane
   , Card
@@ -67,6 +67,7 @@ const MainArea: React.FC = () => {
     toRectX: number;
     toRectY: number;
     el?: HTMLDivElement;
+    label?: string;
   }
   const [drag, setDrag] = useState<DragState | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
@@ -86,12 +87,13 @@ const MainArea: React.FC = () => {
   );
   const rafIdRef = useRef<number | null>(null);
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (label: string, e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget as HTMLDivElement;
     if (!el) return;
 
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
+    console.log("onPointerDown", { label, clientX: e.clientX, clientY: e.clientY });
     e.preventDefault();
 
     // Pointer capture：要素外に出てもmove/upを受け取れる
@@ -105,6 +107,7 @@ const MainArea: React.FC = () => {
       toRectX: e.clientX - r.left,
       toRectY: e.clientY - r.top,
       el,
+      label,
     });
     setPointer({ x: e.clientX, y: e.clientY });
     document.body.style.cursor = "grabbing";
@@ -112,7 +115,7 @@ const MainArea: React.FC = () => {
     // updateAutoScrollSpeed(e.clientX, e.clientY); // a matter of preference
   }
 
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!drag) return;
     if (e.pointerId !== drag.pointerId) return;
     setPointer({ x: e.clientX, y: e.clientY });
@@ -128,13 +131,13 @@ const MainArea: React.FC = () => {
     stopAutoScroll();
   };
 
-  const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!drag) return;
     if (e.pointerId !== drag.pointerId) return;
     endDrag();
   }
 
-  const onPointerCancel = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!drag) return;
     if (e.pointerId !== drag.pointerId) return;
     endDrag();
@@ -206,7 +209,12 @@ const MainArea: React.FC = () => {
       if (!container) return;
 
       const tick = () => {
-        const { x: sx, y: sy } = scrollSpeedRef.current.get(area);
+        const speed = scrollSpeedRef.current.get(area);
+        if (!speed) {
+          rafIdRef.current = null;
+          return;
+        }
+        const { x: sx, y: sy } = speed;
 
         if (!container || (sx === 0 && sy === 0)) {
           rafIdRef.current = null;
@@ -236,19 +244,25 @@ const MainArea: React.FC = () => {
     open: boolean;
     x: number;
     y: number;
+    label?: string;
   };
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menu, setMenu] = useState<MenuState>({ open: false, x: 0, y: 0 });
 
-  const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onContextMenu = (
+    label: string,
+    e: React.MouseEvent<HTMLDivElement>
+  ) => {
     if (drag) return;
     e.preventDefault();
     setMenu({
       open: true,
       x: e.clientX,
       y: e.clientY,
+      label,
     });
+    console.log("onContextMenu", { label, clientX: e.clientX, clientY: e.clientY });
   };
 
   const closeMenu = () => setMenu((m) => ({ ...m, open: false }));
@@ -256,7 +270,7 @@ const MainArea: React.FC = () => {
   useEffect(() => {
     if (!menu.open) return;
 
-    const onPointerDown = (ev: PointerEvent) => {
+    const onPointerDownMenu = (ev: globalThis.PointerEvent) => {
       // メニュー内クリックは無視、それ以外は閉じる
       const target = ev.target as Node | null;
       if (target && menuRef.current?.contains(target)) return;
@@ -267,14 +281,126 @@ const MainArea: React.FC = () => {
       if (ev.key === "Escape") closeMenu();
     };
 
-    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    window.addEventListener("pointerdown", onPointerDownMenu, { capture: true });
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      window.removeEventListener("pointerdown", onPointerDown, { capture: true } as any);
+      window.removeEventListener("pointerdown", onPointerDownMenu, { capture: true } as any);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [menu.open]);
+
+  // components
+
+  const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay}) => {
+    const [d, pss] = slotPositionDay;
+    const pIdxss = () => {
+      let r: [number, number[]][] = new Array();
+      let idx = 0;
+      pss.forEach(ps => {
+        r.push([idx, ps]);
+        idx += 1;
+      });
+      return r;
+    }
+    return (
+      <Pane
+        display="flex"
+        flexDirection="column"
+        gap={gapClass}
+        padding={paddingDay}
+        background='tint2'
+        borderRadius={8}
+      >
+        <Card
+          height={heightDay}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <Heading textAlign="center">{slotSettings[d][0]}</Heading>
+        </Card>
+        { classAlls.map(cls => (
+          <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
+            { pIdxss().map(([i, ps]) => (
+              <Pane display="flex" flexDirection="row">
+                { ps.map(p => (
+                  <Slot label={cls + d + i + p} />
+                ))}
+              </Pane>
+            ))}
+          </Pane>
+        ))}
+      </Pane>
+    );
+  }
+
+  const Slot: React.FC<{label: string}> = ({label}) => (
+    <Card
+      onPointerDown={(e) => onPointerDown(label, e)}
+      onContextMenu={(e) => onContextMenu(label, e)}
+      height={heightSlot}
+      padding={majorScale(1)}
+      width={80}
+      elevation={1}
+      background="white"
+      cursor="grab"
+    >
+      <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
+    </Card>
+  );
+
+  const ContextMenu: React.FC = () => {
+    const MenuItem: React.FC<{
+      funcLabel: string;
+      onClick: () => void
+    }> = ({ funcLabel, onClick }) => {
+      return (
+        <button
+          onClick={onClick}
+          style={{
+            display: "block",
+            width: "100%",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        >
+          {funcLabel}
+        </button>
+      );
+    }
+    return (
+      <div
+        ref={menuRef}
+        style={{
+          position: "fixed",
+          top: menu.y,
+          left: menu.x,
+          background: "white",
+          zIndex: 9999,
+          border: "1px solid lightgray",
+        }}
+      >
+        <MenuItem
+          funcLabel="A"
+          onClick={() => {
+            console.log("A");
+            closeMenu();
+          }}
+        />
+        <MenuItem
+          funcLabel="B"
+          onClick={() => {
+            console.log("B");
+            closeMenu();
+          }}
+        />
+        <hr />
+        <MenuItem funcLabel="close" onClick={closeMenu} />
+      </div>
+    );
+  };
 
   return (
     <Pane
@@ -349,23 +475,11 @@ const MainArea: React.FC = () => {
         </Pane>
 
         { slotPositions().map(slotPositionDay => (
-          <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} onPointerDown={onPointerDown} />
+          <Day
+            key={slotPositionDay[0]}
+            slotPositionDay={slotPositionDay}
+          />
         ))}
-
-        <div
-          onPointerDown={onPointerDown}
-          onContextMenu={onContextMenu}
-          style={{
-            border: "solid",
-            padding: 10,
-            width: 80,
-            height: 30,
-            textAlign: "center",
-            cursor: "grab",
-          }}
-        >
-          drag me
-        </div>
 
       </Pane>
 
@@ -389,118 +503,8 @@ const MainArea: React.FC = () => {
         </div>
       )}
 
-      {/* context menu */}
-      {menu.open && (
-        <div
-          ref={menuRef}
-          style={{
-            position: "fixed",
-            top: menu.y,
-            left: menu.x,
-            background: "white",
-            border: "solid",
-            zIndex: 9999,
-          }}
-        >
-          <MenuItem
-            label="A"
-            onClick={() => {
-              console.log("A");
-              closeMenu();
-            }}
-          />
-          <MenuItem
-            label="B"
-            onClick={() => {
-              console.log("B");
-              closeMenu();
-            }}
-          />
-          <hr />
-          <MenuItem
-            label="close"
-            onClick={closeMenu}
-          />
-        </div>
-      )}
-
+      {menu.open && <ContextMenu />}
 
     </Pane>
   );
 }  
-
-const Day: React.FC<{
-  slotPositionDay: [number, number[][]],
-  onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
-}> = ({slotPositionDay, onPointerDown}) => {
-  const [d, pss] = slotPositionDay;
-  const pIdxss = () => {
-    let r: [number, number[]][] = new Array();
-    let idx = 0;
-    pss.forEach(ps => {
-      r.push([idx, ps]);
-      idx += 1;
-    });
-    return r;
-  }
-  return (
-    <Pane
-      display="flex"
-      flexDirection="column"
-      gap={gapClass}
-      padding={paddingDay}
-      background='tint2'
-      borderRadius={8}
-    >
-      <Card
-        height={heightDay}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <Heading textAlign="center">{slotSettings[d][0]}</Heading>
-      </Card>
-      { classAlls.map(cls => (
-        <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-          { pIdxss().map(([i, ps]) => (
-            <Pane display="flex" flexDirection="row">
-              { ps.map(p => (
-                <Slot label={cls + d + i + p} onPointerDown={onPointerDown} />
-              ))}
-            </Pane>
-          ))}
-        </Pane>
-      ))}
-    </Pane>
-  );
-}
-
-const Slot: React.FC<{label: string, onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void }> = ({ label, onPointerDown }) => (
-  <Card
-    onPointerDown={onPointerDown}
-    height={heightSlot}
-    padding={majorScale(1)}
-    width={80}
-    elevation={1}
-    background="white"
-  >
-    <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
-  </Card>
-);
-
-const MenuItem: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: "block",
-        width: "100%",
-        cursor: "pointer",
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
-      {label}
-    </button>
-  );
-}
