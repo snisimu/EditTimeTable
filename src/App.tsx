@@ -19,26 +19,19 @@ const slotSettings: [string, number[]][] =
       ]
     ]
   ]
-const classAlls: string[] = ["A", "B"];
+const classAlls: string[] = ["A", "B", "C", "C", "C", "C", "C", "C", "C", "C", "C"];
 
 const heightSlot = 40;
 const heightDay = 20;
 const gapClass = majorScale(1);
 const paddingDay = majorScale(1);
 
-type DragState = {
-  pointerId: number;
-  toRectX: number;
-  toRectY: number;
-  el?: HTMLDivElement;
-}
-
 // auxiliary
 
 const slotPositions: (() => [number, number[][]][]) = () => {
   let r: [number, number[][]][] = new Array();
   let d = 0;
-  slotSettings.forEach(([day, slotNums]) => {
+  slotSettings.forEach(([_, slotNums]) => {
     r.push([d, slotNums.map(n => Array.from({ length: n }, (_, i) => i))]);
     d += 1;
   });
@@ -49,7 +42,7 @@ const slotPositions: (() => [number, number[][]][]) = () => {
 
 export default function App() {
   return (
-    <Pane display="flex" flexDirection="column" height="100vh">
+    <Pane display="flex" flexDirection="column" height="97vh">
       {/* Top Pane/Header */}
       <Pane
         background="blue50"
@@ -68,35 +61,23 @@ export default function App() {
 }
 
 const MainArea: React.FC = () => {
-  return (
-    <Pane display="flex" flex={1} minHeight={0}>
-      {/* Sidebar */}
-      <Pane
-        background="tint1"
-        display="flex"
-        flexDirection="column"
-        padding={majorScale(2)}
-        elevation={2}
-        overflowY="auto"
-        minHeight={0}
-        gap={majorScale(4)}
-      >
-        <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-          <Slot label="itemX" />
-          <Slot label="itemY" />
-      </Pane>
 
-      <TableArea />
+  const tableAreaRef = useRef<HTMLDivElement>(null);
 
-    </Pane>
-  );
-}  
+  const scrollSpeedRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const rafIdRef = useRef<number | null>(null);
 
-const TableArea: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const itemRef = useRef<HTMLDivElement | null>(null);
+  type DragState = {
+    pointerId: number;
+    toRectX: number;
+    toRectY: number;
+    el?: HTMLDivElement;
+  }
+
   const [drag, setDrag] = useState<DragState | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+
+  const itemRef = useRef<HTMLDivElement>(null);
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget as HTMLDivElement; // itemRef.current
@@ -121,14 +102,14 @@ const TableArea: React.FC = () => {
     setPointer({ x: e.clientX, y: e.clientY });
     document.body.style.cursor = "grabbing";
     e.currentTarget.style.cursor = "grabbing";
-    // updateAutoScrollSpeed(e.clientX, e.clientY);
+    updateAutoScrollSpeed(e.clientX, e.clientY);
   }
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!drag) return;
     if (e.pointerId !== drag.pointerId) return;
     setPointer({ x: e.clientX, y: e.clientY });
-    // updateAutoScrollSpeed(e.clientX, e.clientY);
+    updateAutoScrollSpeed(e.clientX, e.clientY);
     console.log("onPointerMove", { eclientY: e.clientY });
   }
 
@@ -137,7 +118,7 @@ const TableArea: React.FC = () => {
     setDrag(null);
     setPointer(null);
     document.body.style.cursor = "";
-    // stopAutoScroll();
+    stopAutoScroll();
   };
 
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -152,90 +133,201 @@ const TableArea: React.FC = () => {
     endDrag();
   };
 
+  const stopAutoScroll = () => {
+    scrollSpeedRef.current = { x: 0, y: 0 };
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+  };
+
+  const startAutoScrollIfNeeded = () => {
+    if (rafIdRef.current !== null) return;
+
+    const tick = () => {
+      const container = tableAreaRef.current;
+      const { x: sx, y: sy } = scrollSpeedRef.current;
+
+      if (!container || (sx === 0 && sy === 0)) {
+        rafIdRef.current = null;
+        return;
+      }
+
+      // clamp（はみ出し防止）
+      const maxTop = container.scrollHeight - container.clientHeight;
+      const maxLeft = container.scrollWidth - container.clientWidth;
+
+      container.scrollTop = Math.max(0, Math.min(maxTop, container.scrollTop + sy));
+      container.scrollLeft = Math.max(0, Math.min(maxLeft, container.scrollLeft + sx));
+
+      rafIdRef.current = requestAnimationFrame(tick);
+    };
+
+    rafIdRef.current = requestAnimationFrame(tick);
+  };
+
+  const updateAutoScrollSpeed = (clientX: number, clientY: number) => {
+    const container = tableAreaRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect(); // viewport基準
+    const threshold = 48; // 端からこのpx以内でスクロール
+    const maxSpeed = 18; // px/frame
+
+    const distLeft = clientX - rect.left;
+    const distRight = rect.right - clientX;
+    const distTop = clientY - rect.top;
+    const distBottom = rect.bottom - clientY;
+
+    let sx = 0;
+    let sy = 0;
+
+    // 横方向
+    if (distLeft >= 0 && distLeft < threshold) {
+      const t = 1 - distLeft / threshold;
+      sx = -maxSpeed * t;
+    } else if (distRight >= 0 && distRight < threshold) {
+      const t = 1 - distRight / threshold;
+      sx = maxSpeed * t;
+    }
+
+    // 縦方向
+    if (distTop >= 0 && distTop < threshold) {
+      const t = 1 - distTop / threshold;
+      sy = -maxSpeed * t;
+    } else if (distBottom >= 0 && distBottom < threshold) {
+      const t = 1 - distBottom / threshold;
+      sy = maxSpeed * t;
+    }
+
+    // 小さい値は0に丸める
+    sx = Math.abs(sx) < 0.5 ? 0 : sx;
+    sy = Math.abs(sy) < 0.5 ? 0 : sy;
+
+    scrollSpeedRef.current = { x: sx, y: sy };
+
+    if (sx !== 0 || sy !== 0) startAutoScrollIfNeeded();
+    else stopAutoScroll();
+  };
+
+  useEffect(() => {
+    return () => stopAutoScroll();
+  }, []);
+
   return (
     <Pane
-      ref={containerRef}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
-      flex={1}
-      overflowY="auto"
-      overflowX="auto"
-      padding={majorScale(2)}
       display="flex"
-      flexDirection="row"
-      gap={majorScale(1)}
+      flex={1}
+      minHeight={0}
     >
-
-      {/* class headers */}
+      {/* Sidebar */}
       <Pane
+        background="tint1"
         display="flex"
         flexDirection="column"
-        gap={gapClass}
-        padding={paddingDay}
+        padding={majorScale(2)}
+        elevation={2}
+        overflowY="auto"
+        minHeight={0}
+        gap={majorScale(4)}
       >
-        <Card key="topleft" height={heightDay}>
-          <Heading>　</Heading>
-        </Card>
-        { classAlls.map(cls => (
-          <Card
-            key={cls+"header"}
-            height={heightSlot}
-            minHeight={heightSlot}
-            maxHeight={heightSlot}
-            padding={majorScale(1)}
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Heading>{cls}</Heading>
-          </Card>
-        ))}
+        <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
+          <Slot label="itemX" />
+          <Slot label="itemY" />
+          <Slot label="itemZ" />
+          <Slot label="itemZ" />
+          <Slot label="itemZ" />
+          <Slot label="itemZ" />
+          <Slot label="itemZ" />
       </Pane>
 
-      { slotPositions().map(slotPositionDay => (
-        <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} />
-      ))}
+      // table area
 
-      <div
-        ref={itemRef}
-        onPointerDown={onPointerDown}
-        // onContextMenu={onContextMenu}
-        style={{
-          border: "solid",
-          padding: 10,
-          width: 80,
-          height: 30,
-          textAlign: "center",
-          cursor: "grab",
-        }}
+      <Pane
+        ref={tableAreaRef}
+        flex={1}
+        overflowY="auto"
+        overflowX="auto"
+        padding={majorScale(2)}
+        display="flex"
+        flexDirection="row"
+        gap={majorScale(1)}
       >
-        drag me
-      </div>
 
-      {/* ghost */}
-      {drag && pointer && (
+        {/* class headers */}
+        <Pane
+          display="flex"
+          flexDirection="column"
+          gap={gapClass}
+          padding={paddingDay}
+        >
+          <Card key="topleft" height={heightDay}>
+            <Heading>　</Heading>
+          </Card>
+          { classAlls.map(cls => (
+            <Card
+              key={cls+"header"}
+              height={heightSlot}
+              minHeight={heightSlot}
+              maxHeight={heightSlot}
+              padding={majorScale(1)}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Heading>{cls}</Heading>
+            </Card>
+          ))}
+        </Pane>
+
+        { slotPositions().map(slotPositionDay => (
+          <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} />
+        ))}
+
         <div
+          ref={itemRef}
+          onPointerDown={onPointerDown}
+          // onContextMenu={onContextMenu}
           style={{
-            position: "fixed",
-            top: pointer.y - drag.toRectY,
-            left: pointer.x - drag.toRectX,
             border: "solid",
             padding: 10,
             width: 80,
             height: 30,
             textAlign: "center",
-            background: "lightgray",
-            pointerEvents: "none",
+            cursor: "grab",
           }}
         >
-          dragging
+          drag me
         </div>
-      )}
+
+        {/* ghost */}
+        {drag && pointer && (
+          <div
+            style={{
+              position: "fixed",
+              top: pointer.y - drag.toRectY,
+              left: pointer.x - drag.toRectX,
+              border: "solid",
+              padding: 10,
+              width: 80,
+              height: 30,
+              textAlign: "center",
+              background: "lightgray",
+              pointerEvents: "none",
+            }}
+          >
+            dragging
+          </div>
+        )}
+
+      </Pane>
 
     </Pane>
   );
-}
+}  
 
 const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay}) => {
   const [d, pss] = slotPositionDay;
