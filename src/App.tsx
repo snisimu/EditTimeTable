@@ -355,21 +355,44 @@ const MainArea: React.FC = () => {
       funcLabel: string;
       onClick: () => void
     }> = ({ funcLabel, onClick }) => {
-      return (
-        <button
-          onClick={onClick}
-          style={{
-            display: "block",
-            width: "100%",
-            cursor: "pointer",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-          {funcLabel}
-        </button>
-      );
-    }
+
+    useEffect(() => {
+      if (!menuRef.current) return;
+
+      const rect = menuRef.current.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      let nextX = menu.x;
+      let nextY = menu.y;
+
+      if (rect.right > vw) {
+        nextX = Math.max(0, vw - rect.width);
+      }
+      if (rect.bottom > vh) {
+        nextY = Math.max(0, vh - rect.height);
+      }
+
+      if (nextX !== menu.x || nextY !== menu.y) {
+        setMenu(m => ({ ...m, x: nextX, y: nextY }));
+      }
+    }, [menu.x, menu.y]);
+
+    return (
+      <button
+        onClick={onClick}
+        style={{
+          display: "block",
+          width: "100%",
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
+        {funcLabel}
+      </button>
+    );
+  }
     return (
       <div
         ref={menuRef}
