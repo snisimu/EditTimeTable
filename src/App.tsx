@@ -19,7 +19,7 @@ const slotSettings: [string, number[]][] =
       ]
     ]
   ]
-const classAlls: string[] = ["A", "B", "C", "C", "C", "C", "C", "C", "C", "C", "C"];
+const classAlls: string[] = ["A", "B", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C"];
 
 const heightSlot = 40;
 const heightDay = 20;
@@ -62,20 +62,29 @@ export default function App() {
 
 const MainArea: React.FC = () => {
 
-  const tableAreaRef = useRef<HTMLDivElement>(null);
-
-  const scrollSpeedRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const rafIdRef = useRef<number | null>(null);
-
   type DragState = {
     pointerId: number;
     toRectX: number;
     toRectY: number;
     el?: HTMLDivElement;
   }
-
   const [drag, setDrag] = useState<DragState | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+
+  type AreaOnMain = "Sidebar" | "TableArea" | null;
+  const scrollSpeedRefInit = new Map<AreaOnMain, { x: number; y: number }>([
+    ["Sidebar", { x: 0, y: 0 }],
+    ["TableArea", { x: 0, y: 0 }],
+  ]);
+  const tableAreaRef = useRef<HTMLDivElement>(null);
+  const sideBarRef = useRef<HTMLDivElement>(null);
+  const containerOf = (area: AreaOnMain) => {
+    return area === "Sidebar" ? sideBarRef.current : tableAreaRef.current;
+  }
+  const scrollSpeedRef = useRef(
+    new Map<AreaOnMain, { x: number; y: number }>(scrollSpeedRefInit)
+  );
+  const rafIdRef = useRef<number | null>(null);
 
   const itemRef = useRef<HTMLDivElement>(null);
 
@@ -102,7 +111,7 @@ const MainArea: React.FC = () => {
     setPointer({ x: e.clientX, y: e.clientY });
     document.body.style.cursor = "grabbing";
     e.currentTarget.style.cursor = "grabbing";
-    updateAutoScrollSpeed(e.clientX, e.clientY);
+    // updateAutoScrollSpeed(e.clientX, e.clientY); // a matter of preference
   }
 
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
@@ -110,7 +119,7 @@ const MainArea: React.FC = () => {
     if (e.pointerId !== drag.pointerId) return;
     setPointer({ x: e.clientX, y: e.clientY });
     updateAutoScrollSpeed(e.clientX, e.clientY);
-    console.log("onPointerMove", { eclientY: e.clientY });
+    // console.log("onPointerMove", { eclientY: e.clientY });
   }
 
   const endDrag = () => {
@@ -134,43 +143,28 @@ const MainArea: React.FC = () => {
   };
 
   const stopAutoScroll = () => {
-    scrollSpeedRef.current = { x: 0, y: 0 };
+    scrollSpeedRef.current = new Map<AreaOnMain, { x: number; y: number }>(scrollSpeedRefInit);
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
   };
 
-  const startAutoScrollIfNeeded = () => {
-    if (rafIdRef.current !== null) return;
-
-    const tick = () => {
-      const container = tableAreaRef.current;
-      const { x: sx, y: sy } = scrollSpeedRef.current;
-
-      if (!container || (sx === 0 && sy === 0)) {
-        rafIdRef.current = null;
-        return;
-      }
-
-      // clamp（はみ出し防止）
-      const maxTop = container.scrollHeight - container.clientHeight;
-      const maxLeft = container.scrollWidth - container.clientWidth;
-
-      container.scrollTop = Math.max(0, Math.min(maxTop, container.scrollTop + sy));
-      container.scrollLeft = Math.max(0, Math.min(maxLeft, container.scrollLeft + sx));
-
-      rafIdRef.current = requestAnimationFrame(tick);
-    };
-
-    rafIdRef.current = requestAnimationFrame(tick);
-  };
-
   const updateAutoScrollSpeed = (clientX: number, clientY: number) => {
-    const container = tableAreaRef.current;
+    updateAutoScrollSpeedOn("Sidebar", clientX, clientY);
+    updateAutoScrollSpeedOn("TableArea", clientX, clientY);
+  }
+  const updateAutoScrollSpeedOn = (area: AreaOnMain, clientX: number, clientY: number) => {
+    if (!area) return;
+    const container = containerOf(area);
     if (!container) return;
 
     const rect = container.getBoundingClientRect(); // viewport基準
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      scrollSpeedRef.current.set(area, { x: 0, y: 0 });
+      return;
+    }
+
     const threshold = 48; // 端からこのpx以内でスクロール
     const maxSpeed = 18; // px/frame
 
@@ -204,10 +198,37 @@ const MainArea: React.FC = () => {
     sx = Math.abs(sx) < 0.5 ? 0 : sx;
     sy = Math.abs(sy) < 0.5 ? 0 : sy;
 
-    scrollSpeedRef.current = { x: sx, y: sy };
+    scrollSpeedRef.current.set(area, { x: sx, y: sy });
+    console.log("updateAutoScrollSpeedOn", { area, sx, sy });
 
-    if (sx !== 0 || sy !== 0) startAutoScrollIfNeeded();
+    if (sx !== 0 || sy !== 0) startAutoScrollIfNeeded(area);
     else stopAutoScroll();
+  };
+
+  const startAutoScrollIfNeeded = (area: AreaOnMain) => {
+    if (rafIdRef.current !== null) return;
+    const container = containerOf(area);
+    if (!container) return;
+
+    const tick = () => {
+      const { x: sx, y: sy } = scrollSpeedRef.current.get(area);
+
+      if (!container || (sx === 0 && sy === 0)) {
+        rafIdRef.current = null;
+        return;
+      }
+
+      // clamp（はみ出し防止）
+      const maxTop = container.scrollHeight - container.clientHeight;
+      const maxLeft = container.scrollWidth - container.clientWidth;
+
+      container.scrollTop = Math.max(0, Math.min(maxTop, container.scrollTop + sy));
+      container.scrollLeft = Math.max(0, Math.min(maxLeft, container.scrollLeft + sx));
+
+      rafIdRef.current = requestAnimationFrame(tick);
+    };
+
+    rafIdRef.current = requestAnimationFrame(tick);
   };
 
   useEffect(() => {
@@ -223,8 +244,11 @@ const MainArea: React.FC = () => {
       flex={1}
       minHeight={0}
     >
+
       {/* Sidebar */}
+
       <Pane
+        ref={sideBarRef}
         background="tint1"
         display="flex"
         flexDirection="column"
@@ -244,7 +268,7 @@ const MainArea: React.FC = () => {
           <Slot label="itemZ" />
       </Pane>
 
-      // table area
+      {/* table area */}
 
       <Pane
         ref={tableAreaRef}
