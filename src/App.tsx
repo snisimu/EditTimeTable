@@ -43,7 +43,7 @@ const slotPositions: (() => [number, number[][]][]) = () => {
 export default function App() {
   return (
     <Pane display="flex" flexDirection="column" height="97vh">
-      {/* Top Pane/Header */}
+      {/* Top Pane */}
       <Pane
         background="blue50"
         padding={16}
@@ -160,7 +160,7 @@ const MainArea: React.FC = () => {
     if (!container) return;
 
     const rect = container.getBoundingClientRect(); // viewport基準
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+    if (clientX < rect.left || clientX > rect.right /* || clientY < rect.top || clientY > rect.bottom */) {
       scrollSpeedRef.current.set(area, { x: 0, y: 0 });
       return;
     }
@@ -170,13 +170,13 @@ const MainArea: React.FC = () => {
 
     const distLeft = clientX - rect.left;
     const distRight = rect.right - clientX;
-    const distTop = clientY - rect.top;
-    const distBottom = rect.bottom - clientY;
+    const distTop = Math.max(clientY - rect.top, 0);
+    const distBottom = Math.max(rect.bottom - clientY, 0);
 
     let sx = 0;
     let sy = 0;
 
-    // 横方向
+    // horizontal
     if (distLeft >= 0 && distLeft < threshold) {
       const t = 1 - distLeft / threshold;
       sx = -maxSpeed * t;
@@ -185,7 +185,7 @@ const MainArea: React.FC = () => {
       sx = maxSpeed * t;
     }
 
-    // 縦方向
+    // vertical
     if (distTop >= 0 && distTop < threshold) {
       const t = 1 - distTop / threshold;
       sy = -maxSpeed * t;
@@ -199,41 +199,84 @@ const MainArea: React.FC = () => {
     sy = Math.abs(sy) < 0.5 ? 0 : sy;
 
     scrollSpeedRef.current.set(area, { x: sx, y: sy });
-    console.log("updateAutoScrollSpeedOn", { area, sx, sy });
+    // console.log("updateAutoScrollSpeedOn", { area, sx, sy });
 
-    if (sx !== 0 || sy !== 0) startAutoScrollIfNeeded(area);
-    else stopAutoScroll();
-  };
+    if (sx == 0 && sy == 0) stopAutoScroll();
+    else {
+      if (rafIdRef.current !== null) return;
+      const container = containerOf(area);
+      if (!container) return;
 
-  const startAutoScrollIfNeeded = (area: AreaOnMain) => {
-    if (rafIdRef.current !== null) return;
-    const container = containerOf(area);
-    if (!container) return;
+      const tick = () => {
+        const { x: sx, y: sy } = scrollSpeedRef.current.get(area);
 
-    const tick = () => {
-      const { x: sx, y: sy } = scrollSpeedRef.current.get(area);
+        if (!container || (sx === 0 && sy === 0)) {
+          rafIdRef.current = null;
+          return;
+        }
 
-      if (!container || (sx === 0 && sy === 0)) {
-        rafIdRef.current = null;
-        return;
-      }
+        // clamp
+        const maxTop = container.scrollHeight - container.clientHeight;
+        const maxLeft = container.scrollWidth - container.clientWidth;
 
-      // clamp（はみ出し防止）
-      const maxTop = container.scrollHeight - container.clientHeight;
-      const maxLeft = container.scrollWidth - container.clientWidth;
+        container.scrollTop = Math.max(0, Math.min(maxTop, container.scrollTop + sy));
+        container.scrollLeft = Math.max(0, Math.min(maxLeft, container.scrollLeft + sx));
 
-      container.scrollTop = Math.max(0, Math.min(maxTop, container.scrollTop + sy));
-      container.scrollLeft = Math.max(0, Math.min(maxLeft, container.scrollLeft + sx));
-
+        rafIdRef.current = requestAnimationFrame(tick);
+      };
       rafIdRef.current = requestAnimationFrame(tick);
-    };
-
-    rafIdRef.current = requestAnimationFrame(tick);
+    }
   };
 
   useEffect(() => {
     return () => stopAutoScroll();
   }, []);
+
+  // context menu
+
+  type MenuState = {
+    open: boolean;
+    x: number;
+    y: number;
+  };
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menu, setMenu] = useState<MenuState>({ open: false, x: 0, y: 0 });
+
+  const onContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (drag) return;
+    e.preventDefault();
+    setMenu({
+      open: true,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  const closeMenu = () => setMenu((m) => ({ ...m, open: false }));
+
+  useEffect(() => {
+    if (!menu.open) return;
+
+    const onPointerDown = (ev: PointerEvent) => {
+      // メニュー内クリックは無視、それ以外は閉じる
+      const target = ev.target as Node | null;
+      if (target && menuRef.current?.contains(target)) return;
+      closeMenu();
+    };
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key === "Escape") closeMenu();
+    };
+
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true } as any);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menu.open]);
 
   return (
     <Pane
@@ -314,7 +357,7 @@ const MainArea: React.FC = () => {
         <div
           ref={itemRef}
           onPointerDown={onPointerDown}
-          // onContextMenu={onContextMenu}
+          onContextMenu={onContextMenu}
           style={{
             border: "solid",
             padding: 10,
@@ -327,27 +370,63 @@ const MainArea: React.FC = () => {
           drag me
         </div>
 
-        {/* ghost */}
-        {drag && pointer && (
-          <div
-            style={{
-              position: "fixed",
-              top: pointer.y - drag.toRectY,
-              left: pointer.x - drag.toRectX,
-              border: "solid",
-              padding: 10,
-              width: 80,
-              height: 30,
-              textAlign: "center",
-              background: "lightgray",
-              pointerEvents: "none",
-            }}
-          >
-            dragging
-          </div>
-        )}
-
       </Pane>
+
+      {/* ghost */}
+      {drag && pointer && (
+        <div
+          style={{
+            position: "fixed",
+            top: pointer.y - drag.toRectY,
+            left: pointer.x - drag.toRectX,
+            border: "solid",
+            padding: 10,
+            width: 80,
+            height: 30,
+            textAlign: "center",
+            background: "lightgray",
+            pointerEvents: "none",
+          }}
+        >
+          dragging
+        </div>
+      )}
+
+      {/* context menu */}
+      {menu.open && (
+        <div
+          ref={menuRef}
+          style={{
+            position: "fixed",
+            top: menu.y,
+            left: menu.x,
+            background: "white",
+            border: "solid",
+            zIndex: 9999,
+          }}
+        >
+          <MenuItem
+            label="A"
+            onClick={() => {
+              console.log("A");
+              closeMenu();
+            }}
+          />
+          <MenuItem
+            label="B"
+            onClick={() => {
+              console.log("B");
+              closeMenu();
+            }}
+          />
+          <hr />
+          <MenuItem
+            label="close"
+            onClick={closeMenu}
+          />
+        </div>
+      )}
+
 
     </Pane>
   );
@@ -407,3 +486,20 @@ const Slot: React.FC<{ label: string }> = ({ label }) => (
     <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
   </Card>
 );
+
+const MenuItem: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "block",
+        width: "100%",
+        cursor: "pointer",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+    >
+      {label}
+    </button>
+  );
+}
