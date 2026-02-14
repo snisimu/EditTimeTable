@@ -285,7 +285,6 @@ export default function App() {
   }, [menu.open]);
 
   // drag or context menu 以外の要因でドラッグ終了
-  /*
   useEffect(() => {
     if (!drag) return;
 
@@ -315,7 +314,6 @@ export default function App() {
       window.removeEventListener("contextmenu", onContextMenu);
     };
   }, [drag]);
-  */
 
   /* App */
   return (
