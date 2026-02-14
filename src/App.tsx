@@ -440,7 +440,7 @@ const MainArea: React.FC<{
     );
   }
 
-  const Slot: React.FC<{label: string}> = ({label}) => {
+  const Slot: React.FC<{label: string | null}> = ({label}) => {
     const dragging = drag !== null && drag.label === label;
     return (
       <Card
@@ -451,7 +451,7 @@ const MainArea: React.FC<{
         height={heightSlot}
         width={widthSlot}
         padding={majorScale(1)}
-        elevation={dragging ? 0 : 1}
+        elevation={(dragging || !label) ? 0 : 1}
         background="white"
         cursor="grab"
       >
@@ -460,7 +460,7 @@ const MainArea: React.FC<{
           fontSize="small"
           color={dragging ? "silver" : "black"}
         >
-          {label.split(":")[0]}
+          {label ? label.split(":")[0] : "　"}
         </Paragraph>
       </Card>
     );
@@ -591,13 +591,13 @@ const MainArea: React.FC<{
         gap={majorScale(4)}
       >
         <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-          <Slot label="itemX:" />
-          <Slot label="itemY:" />
-          <Slot label="itemZ:0" />
-          <Slot label="itemZ:1" />
-          <Slot label="itemZ:2" />
-          <Slot label="itemZ:3" />
-          <Slot label="itemZ:4" />
+        <Slot label="itemX:" />
+        <Slot label="itemY:" />
+        <Slot label="itemZ:0" />
+        <Slot />
+        <Slot label="itemZ:2" />
+        <Slot label="itemZ:3" />
+        <Slot label="itemZ:4" />
       </Pane>
 
       {/* table area */}
