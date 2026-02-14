@@ -22,6 +22,7 @@ const slotSettings: [string, number[]][] =
 const classAlls: string[] = ["A", "B", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C"];
 
 const heightSlot = 40;
+const widthSlot = 80;
 const heightDay = 20;
 const gapClass = majorScale(1);
 const paddingDay = majorScale(1);
@@ -335,20 +336,48 @@ const MainArea: React.FC = () => {
     );
   }
 
-  const Slot: React.FC<{label: string}> = ({label}) => (
+  const Slot: React.FC<{label: string}> = ({label}) => {
+    const dragging = drag !== null && drag.label === label;
+    return (
+      <Card
+        onPointerDown={(e) => onPointerDown(label, e)}
+        onContextMenu={(e) => onContextMenu(label, e)}
+        height={heightSlot}
+        width={widthSlot}
+        padding={majorScale(1)}
+        elevation={dragging ? 0 : 1}
+        background="white"
+        cursor="grab"
+      >
+        <Paragraph
+          textAlign="center"
+          fontSize="small"
+          color={dragging ? "silver" : "black"}
+        >
+          {label}
+        </Paragraph>
+      </Card>
+    );
+  }
+  const Ghost: React.FC<{
+    label: string
+    x: number
+    y: number
+  }> = ({label, x, y}) => (
     <Card
-      onPointerDown={(e) => onPointerDown(label, e)}
-      onContextMenu={(e) => onContextMenu(label, e)}
+      position="fixed"
+      top={y}
+      left={x}
       height={heightSlot}
+      width={widthSlot}
       padding={majorScale(1)}
-      width={80}
-      elevation={1}
+      elevation={4}
       background="white"
-      cursor="grab"
+      pointerEvents="none"
     >
       <Paragraph textAlign="center" fontSize="small">{label}</Paragraph>
     </Card>
-  );
+  )
 
   const ContextMenu: React.FC = () => {
     const MenuItem: React.FC<{
@@ -506,25 +535,11 @@ const MainArea: React.FC = () => {
 
       </Pane>
 
-      {/* ghost */}
-      {drag && pointer && (
-        <div
-          style={{
-            position: "fixed",
-            top: pointer.y - drag.toRectY,
-            left: pointer.x - drag.toRectX,
-            border: "solid",
-            padding: 10,
-            width: 80,
-            height: 30,
-            textAlign: "center",
-            background: "lightgray",
-            pointerEvents: "none",
-          }}
-        >
-          dragging
-        </div>
-      )}
+      {drag && pointer && <Ghost
+        label={drag.label}
+        x={pointer.x - drag.toRectX}
+        y={pointer.y - drag.toRectY}
+      />}
 
       {menu.open && <ContextMenu />}
 
