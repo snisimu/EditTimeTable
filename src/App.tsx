@@ -74,7 +74,7 @@ export default function App() {
 
     if (e.pointerType === "mouse" && e.button !== 0) return;
 
-    console.log("onPointerDown", { label, clientX: e.clientX, clientY: e.clientY });
+    // console.log("onPointerDown", { label, clientX: e.clientX, clientY: e.clientY });
     e.preventDefault();
 
     // Pointer capture：要素外に出てもmove/upを受け取れる
@@ -284,12 +284,13 @@ export default function App() {
     };
   }, [menu.open]);
 
-  // drag or context menu 以外の要因でドラッグ終了
+  // WinPointer
   useEffect(() => {
     if (!drag) return;
 
     const onWinPointerUp = (ev: PointerEvent) => {
       if (ev.pointerId !== drag.pointerId) return;
+      handleDrop(ev.clientX, ev.clientY);
       endDrag();
     };
     const onWinPointerCancel = (ev: PointerEvent) => {
@@ -314,6 +315,20 @@ export default function App() {
       window.removeEventListener("contextmenu", onContextMenu);
     };
   }, [drag]);
+
+  const handleDrop = (x: number, y: number) => {
+    if (!drag) return;
+    const el = document.elementFromPoint(x, y);
+    if (!el) return;
+
+    const slotEl = el.closest("[data-slot-id]");
+    if (slotEl) {
+      const labelTo = slotEl.getAttribute("data-slot-id");
+      console.log({labelFrom: drag.label, labelTo});
+    } else {
+      console.log("DROP OUTSIDE");
+    }
+  };
 
   /* App */
   return (
@@ -429,7 +444,9 @@ const MainArea: React.FC<{
     const dragging = drag !== null && drag.label === label;
     return (
       <Card
+        data-slot-id={label}
         onPointerDown={(e) => onPointerDown(label, e)}
+        onPointerUp={onPointerUp}
         onContextMenu={(e) => onContextMenu(label, e)}
         height={heightSlot}
         width={widthSlot}
