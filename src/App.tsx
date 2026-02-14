@@ -86,10 +86,8 @@ const MainArea: React.FC = () => {
   );
   const rafIdRef = useRef<number | null>(null);
 
-  const itemRef = useRef<HTMLDivElement>(null);
-
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    const el = e.currentTarget as HTMLDivElement; // itemRef.current
+    const el = e.currentTarget as HTMLDivElement;
     if (!el) return;
 
     if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -351,11 +349,10 @@ const MainArea: React.FC = () => {
         </Pane>
 
         { slotPositions().map(slotPositionDay => (
-          <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} />
+          <Day key={slotPositionDay[0]} slotPositionDay={slotPositionDay} onPointerDown={onPointerDown} />
         ))}
 
         <div
-          ref={itemRef}
           onPointerDown={onPointerDown}
           onContextMenu={onContextMenu}
           style={{
@@ -432,7 +429,10 @@ const MainArea: React.FC = () => {
   );
 }  
 
-const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay}) => {
+const Day: React.FC<{
+  slotPositionDay: [number, number[][]],
+  onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
+}> = ({slotPositionDay, onPointerDown}) => {
   const [d, pss] = slotPositionDay;
   const pIdxss = () => {
     let r: [number, number[]][] = new Array();
@@ -465,7 +465,7 @@ const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay
           { pIdxss().map(([i, ps]) => (
             <Pane display="flex" flexDirection="row">
               { ps.map(p => (
-                <Slot label={cls + d + i + p} />
+                <Slot label={cls + d + i + p} onPointerDown={onPointerDown} />
               ))}
             </Pane>
           ))}
@@ -475,8 +475,9 @@ const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay
   );
 }
 
-const Slot: React.FC<{ label: string }> = ({ label }) => (
+const Slot: React.FC<{label: string, onPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void }> = ({ label, onPointerDown }) => (
   <Card
+    onPointerDown={onPointerDown}
     height={heightSlot}
     padding={majorScale(1)}
     width={80}
