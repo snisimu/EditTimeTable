@@ -394,7 +394,6 @@ export default function App() {
 
       <MainArea
         drag={drag}
-        pointer={pointer}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
         onPointerMove={onPointerMove}
@@ -418,7 +417,6 @@ export default function App() {
 
 const MainArea: React.FC<{
   drag: DragState | null;
-  pointer: {x:number;y:number} | null;
   onPointerDown: (label: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (label: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
@@ -432,7 +430,6 @@ const MainArea: React.FC<{
 }> = (props) => {
 
   const drag = props.drag;
-  const pointer = props.pointer;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
   const onPointerMove = props.onPointerMove;
