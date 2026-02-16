@@ -18,8 +18,23 @@ const slotSettings: [string, number[]][] =
       , 1
       ]
     ]
+  , ["Wed",
+      [ 2
+      , 1
+      ]
+    ]
+  , ["Thu",
+      [ 2
+      , 1
+      ]
+    ]
+  , ["Fri",
+      [ 2
+      , 1
+      ]
+    ]
   ]
-const classAlls: string[] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M"];
+const classAlls: string[] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 
 const heightSlot = 40;
 const widthSlot = 80;
@@ -591,13 +606,26 @@ const MainArea: React.FC<{
         gap={majorScale(4)}
       >
         <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-        <Slot label="itemX:" />
-        <Slot label="itemY:" />
-        <Slot label="itemZ:0" />
-        <Slot />
-        <Slot label="itemZ:2" />
-        <Slot label="itemZ:3" />
-        <Slot label="itemZ:4" />
+        <Slot label="itemA:" />
+        <Slot label="itemB:" />
+        <Slot label="itemC:" />
+        <Slot label="itemD:" />
+        <Slot label="itemE:" />
+        <Slot label="itemF:" />
+        <Slot label="itemG:" />
+        <Slot label="itemH:" />
+        <Slot label="itemI:" />
+        <Slot label="itemJ:" />
+        <Slot label="itemK:" />
+        <Slot label="itemL:" />
+        <Slot label="itemM:" />
+        <Slot label="itemN:" />
+        <Slot label="itemO:" />
+        <Slot label="itemP:" />
+        <Slot label="itemQ:" />
+        <Slot label="itemR:" />
+        <Slot label="itemS:" />
+        <Slot label="itemT:" />
       </Pane>
 
       {/* table area */}
