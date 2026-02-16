@@ -345,6 +345,33 @@ export default function App() {
     }
   };
 
+  const Ghost: React.FC<{
+    drag: DragState | null;
+    pointer: {x:number;y:number} | null;
+  }> = ({drag, pointer}) => {
+    if (!drag || !pointer) return null;
+    return (
+      <Card
+        position="fixed"
+        top={pointer.y - drag.toRectY}
+        left={pointer.x - drag.toRectX}
+        height={heightSlot}
+        width={widthSlot}
+        padding={majorScale(1)}
+        elevation={4}
+        background="white"
+        pointerEvents="none"
+      >
+        <Paragraph
+          textAlign="center"
+          fontSize="small"
+        >
+          {drag.label.split(":")[0]}
+        </Paragraph>
+      </Card>
+    )
+  }
+
   /* App */
   return (
     <Pane
@@ -378,6 +405,11 @@ export default function App() {
         menuRef={menuRef}
         menu={menu}
         closeMenu={closeMenu}
+      />
+
+      <Ghost
+        drag={drag}
+        pointer={pointer}
       />
 
     </Pane>
@@ -480,30 +512,6 @@ const MainArea: React.FC<{
       </Card>
     );
   }
-  const Ghost: React.FC<{
-    label: string
-    x: number
-    y: number
-  }> = ({label, x, y}) => (
-    <Card
-      position="fixed"
-      top={y}
-      left={x}
-      height={heightSlot}
-      width={widthSlot}
-      padding={majorScale(1)}
-      elevation={4}
-      background="white"
-      pointerEvents="none"
-    >
-      <Paragraph
-        textAlign="center"
-        fontSize="small"
-      >
-        {label.split(":")[0]}
-      </Paragraph>
-    </Card>
-  )
 
   const ContextMenu: React.FC = () => {
     const MenuItem: React.FC<{
@@ -675,12 +683,6 @@ const MainArea: React.FC<{
         ))}
 
       </Pane>
-
-      {drag && pointer && <Ghost
-        label={drag.label}
-        x={pointer.x - drag.toRectX}
-        y={pointer.y - drag.toRectY}
-      />}
 
       {menu.open && <ContextMenu />}
 
