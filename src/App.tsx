@@ -76,7 +76,16 @@ type MenuState = {
 export default function App() {
 
   const [drag, setDrag] = useState<DragState | null>(null);
-  const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
+
+  const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  // ★ rAF でゴーストDOMを動かすための ref
+  const ghostRef = useRef<HTMLDivElement | null>(null);
+  const rafMoveRef = useRef<number | null>(null);
+  // ★ rAF の中で最新 drag を読むため（安全策）
+  const dragRef = useRef<DragState | null>(null);
+  useEffect(() => {
+    dragRef.current = drag;
+  }, [drag]);
 
   type AreaOnMain = "Sidebar" | "TableArea" | null;
   const scrollSpeedRefInit = new Map<AreaOnMain, { x: number; y: number }>([
@@ -93,6 +102,22 @@ export default function App() {
   );
   const rafIdRef = useRef<number | null>(null);
 
+  const scheduleGhostMove = () => {
+    if (rafMoveRef.current != null) return;
+
+    rafMoveRef.current = requestAnimationFrame(() => {
+      // console.log("ghostRef", ghostRef.current, "dragRef", dragRef.current);
+      rafMoveRef.current = null;
+
+      const g = ghostRef.current;
+      const d = dragRef.current;
+      if (!g || !d) return;
+
+      const { x, y } = pointerRef.current;
+      g.style.transform = `translate(${x - d.toRectX}px, ${y - d.toRectY}px)`;
+    });
+  };
+
   const onPointerDown = (label: string, e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget as HTMLDivElement;
     if (!el) return;
@@ -108,33 +133,49 @@ export default function App() {
     const r = el.getBoundingClientRect();
 
     // console.log("onPointerDown", { toRectY: e.clientY - r.top });
-    setDrag({
+
+    const nextDrag: DragState = {
       pointerId: e.pointerId,
       toRectX: e.clientX - r.left,
       toRectY: e.clientY - r.top,
       el,
       label,
-    });
-    setPointer({ x: e.clientX, y: e.clientY });
+    };
+    setDrag(nextDrag);
+    dragRef.current = nextDrag; // ★ 即座に最新化（useEffect待ちしない）
+
+    pointerRef.current = { x: e.clientX, y: e.clientY }; // ★ stateじゃない
     document.body.style.cursor = "grabbing";
     e.currentTarget.style.cursor = "grabbing";
+
+    scheduleGhostMove(); // ★ 初回位置反映
     // updateAutoScrollSpeed(e.clientX, e.clientY); // a matter of preference
   }
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!drag) return;
-    if (e.pointerId !== drag.pointerId) return;
-    setPointer({ x: e.clientX, y: e.clientY });
+    const d = dragRef.current;
+    if (!d) return;
+    if (e.pointerId !== d.pointerId) return;
+
+    pointerRef.current = { x: e.clientX, y: e.clientY };
     updateAutoScrollSpeed(e.clientX, e.clientY);
+    scheduleGhostMove();
     // console.log("onPointerMove", { eclientY: e.clientY });
   }
 
   const endDrag = () => {
     if (drag?.el) drag.el.style.cursor = "grab";
     setDrag(null);
-    setPointer(null);
+    dragRef.current = null;
+
     document.body.style.cursor = "";
     stopAutoScroll();
+
+    // ゴーストの移動予約が残っていれば止める
+    if (rafMoveRef.current != null) {
+      cancelAnimationFrame(rafMoveRef.current);
+      rafMoveRef.current = null;
+    }
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -382,6 +423,11 @@ export default function App() {
         closeMenu={closeMenu}
       />
 
+      <Ghost
+        drag={drag}
+        ghostRef={ghostRef}
+      />
+
     </Pane>
   )
 }
@@ -479,33 +525,6 @@ const MainArea: React.FC<{
         </Paragraph>
       </Card>
     );
-  }
-
-  const Ghost: React.FC<{
-    drag: DragState | null;
-    pointer: {x:number;y:number} | null;
-  }> = ({drag, pointer}) => {
-    if (!drag || !pointer) return null;
-    return (
-      <Card
-        position="fixed"
-        top={pointer.y - drag.toRectY}
-        left={pointer.x - drag.toRectX}
-        height={heightSlot}
-        width={widthSlot}
-        padding={majorScale(1)}
-        elevation={4}
-        background="white"
-        pointerEvents="none"
-      >
-        <Paragraph
-          textAlign="center"
-          fontSize="small"
-        >
-          {drag.label.split(":")[0]}
-        </Paragraph>
-      </Card>
-    )
   }
 
   const ContextMenu: React.FC<{menu: MenuState}> = ({menu}) => {
@@ -678,11 +697,6 @@ const MainArea: React.FC<{
 
       </Pane>
 
-      <Ghost
-        drag={drag}
-        pointer={pointer}
-      />
-
       <ContextMenu
         menu={menu}
       />
@@ -690,3 +704,36 @@ const MainArea: React.FC<{
     </Pane>
   );
 }  
+
+function Ghost({
+  drag,
+  ghostRef,
+}: {
+  drag: DragState | null;
+  ghostRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  if (!drag) return null;
+  return (
+    <Card
+      ref={ghostRef}
+      position="fixed"
+      top={0}
+      left={0}
+      height={heightSlot}
+      width={widthSlot}
+      padding={majorScale(1)}
+      elevation={4}
+      background="white"
+      pointerEvents="none"
+      style={{
+        transform: "translate(-9999px, -9999px)", // 初期は画面外
+        willChange: "transform",
+        zIndex: 9998,
+      }}
+    >
+      <Paragraph textAlign="center" fontSize="small">
+        {drag.label?.split(":")[0]}
+      </Paragraph>
+    </Card>
+  )
+}
