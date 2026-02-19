@@ -54,17 +54,27 @@ const slotPositions: (() => [number, number[][]][]) = () => {
   return r;
 }
 
+// types
+
+type DragState = {
+  pointerId: number;
+  toRectX: number;
+  toRectY: number;
+  el?: HTMLDivElement;
+  label?: string;
+}
+
+type MenuState = {
+  open: boolean;
+  x: number;
+  y: number;
+  label?: string;
+};
+
 // components
 
 export default function App() {
 
-  type DragState = {
-    pointerId: number;
-    toRectX: number;
-    toRectY: number;
-    el?: HTMLDivElement;
-    label?: string;
-  }
   const [drag, setDrag] = useState<DragState | null>(null);
   const [pointer, setPointer] = useState<{ x: number; y: number } | null>(null);
 
@@ -249,13 +259,6 @@ export default function App() {
 
   // context menu
 
-  type MenuState = {
-    open: boolean;
-    x: number;
-    y: number;
-    label?: string;
-  };
-
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [menu, setMenu] = useState<MenuState>({ open: false, x: 0, y: 0 });
 
@@ -345,33 +348,6 @@ export default function App() {
     }
   };
 
-  const Ghost: React.FC<{
-    drag: DragState | null;
-    pointer: {x:number;y:number} | null;
-  }> = ({drag, pointer}) => {
-    if (!drag || !pointer) return null;
-    return (
-      <Card
-        position="fixed"
-        top={pointer.y - drag.toRectY}
-        left={pointer.x - drag.toRectX}
-        height={heightSlot}
-        width={widthSlot}
-        padding={majorScale(1)}
-        elevation={4}
-        background="white"
-        pointerEvents="none"
-      >
-        <Paragraph
-          textAlign="center"
-          fontSize="small"
-        >
-          {drag.label.split(":")[0]}
-        </Paragraph>
-      </Card>
-    )
-  }
-
   /* App */
   return (
     <Pane
@@ -404,11 +380,6 @@ export default function App() {
         menuRef={menuRef}
         menu={menu}
         closeMenu={closeMenu}
-      />
-
-      <Ghost
-        drag={drag}
-        pointer={pointer}
       />
 
     </Pane>
@@ -510,7 +481,35 @@ const MainArea: React.FC<{
     );
   }
 
-  const ContextMenu: React.FC = () => {
+  const Ghost: React.FC<{
+    drag: DragState | null;
+    pointer: {x:number;y:number} | null;
+  }> = ({drag, pointer}) => {
+    if (!drag || !pointer) return null;
+    return (
+      <Card
+        position="fixed"
+        top={pointer.y - drag.toRectY}
+        left={pointer.x - drag.toRectX}
+        height={heightSlot}
+        width={widthSlot}
+        padding={majorScale(1)}
+        elevation={4}
+        background="white"
+        pointerEvents="none"
+      >
+        <Paragraph
+          textAlign="center"
+          fontSize="small"
+        >
+          {drag.label.split(":")[0]}
+        </Paragraph>
+      </Card>
+    )
+  }
+
+  const ContextMenu: React.FC<{menu: MenuState}> = ({menu}) => {
+    if (!menu.open) return null;
     const MenuItem: React.FC<{
       funcLabel: string;
       onClick: () => void
@@ -537,7 +536,6 @@ const MainArea: React.FC<{
           setMenu(m => ({ ...m, x: nextX, y: nextY }));
         }
       }, [menu.x, menu.y]);
-
       return (
         <button
           onClick={onClick}
@@ -553,7 +551,6 @@ const MainArea: React.FC<{
         </button>
       );
     };
-
     return (
       <div
         ref={menuRef}
@@ -681,7 +678,14 @@ const MainArea: React.FC<{
 
       </Pane>
 
-      {menu.open && <ContextMenu />}
+      <Ghost
+        drag={drag}
+        pointer={pointer}
+      />
+
+      <ContextMenu
+        menu={menu}
+      />
 
     </Pane>
   );
