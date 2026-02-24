@@ -96,6 +96,7 @@ type DragState = {
   toRectY: number;
   el?: HTMLDivElement;
   dragKey?: string;
+  subjectName?: string;
 }
 
 type MenuState = {
@@ -184,12 +185,16 @@ export default function App() {
 
     // console.log("onPointerDown", { toRectY: e.clientY - r.top });
 
+    const parsed = fromPosKey(dragKey);
+    const subjectName = parsed ? (subjects.get(dragKey)?.name ?? dragKey) : dragKey;
+
     const nextDrag: DragState = {
       pointerId: e.pointerId,
       toRectX: e.clientX - r.left,
       toRectY: e.clientY - r.top,
       el,
       dragKey,
+      subjectName,
     };
     setDrag(nextDrag);
     dragRef.current = nextDrag; // ★ 即座に最新化（useEffect待ちしない）
@@ -660,6 +665,7 @@ const MainArea: React.FC<{
   type GridRow =
     | { kind: "block-gap"; blockIndex: number }
     | { kind: "grade-gap"; blockIndex: number; clsGroup: string }
+    | { kind: "class-gap"; blockIndex: number; clsGroup: string; cls: string; idx: number }
     | { kind: "day-header"; blockIndex: number }
     | {
         kind: "class";
@@ -695,6 +701,12 @@ const MainArea: React.FC<{
           groupFirst: idx === 0,
           groupSize: classes.length,
         });
+
+        // 各クラス行の「行間」: 次が同一学年内のクラス行なら挿入
+        // （学年切替時は grade-gap があるので二重にしない）
+        if (idx < classes.length - 1) {
+          blockRows.push({ kind: "class-gap", blockIndex, clsGroup, cls, idx });
+        }
       });
     });
 
@@ -703,6 +715,7 @@ const MainArea: React.FC<{
 
   const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
     const dragging = drag !== null && drag.dragKey === dragKey;
+    const hasSubject = (text ?? "").trim().length > 0;
     return (
       <Card
         data-pos-key={dragKey}
@@ -712,7 +725,7 @@ const MainArea: React.FC<{
         height={heightSlot}
         width={widthSlot}
         padding={majorScale(1)}
-        elevation={dragging ? 0 : 1}
+        elevation={dragging ? 0 : hasSubject ? 1 : 0}
         background="white"
         cursor="grab"
       >
@@ -879,6 +892,7 @@ const MainArea: React.FC<{
                   gridColumn={`1 / span ${totalCols}`}
                   gridRow={gridRow}
                   height={majorScale(1)}
+                  pointerEvents="none"
                 />
               );
             }
@@ -891,6 +905,20 @@ const MainArea: React.FC<{
                   gridColumn={`1 / span ${totalCols}`}
                   gridRow={gridRow}
                   height={minorScale(1)}
+                  pointerEvents="none"
+                />
+              );
+            }
+
+            if (row.kind === "class-gap") {
+              const totalCols = 2 + gridCols.length;
+              return (
+                <Pane
+                  key={`class-gap-${row.blockIndex}-${row.clsGroup}-${row.cls}-${row.idx}`}
+                  gridColumn={`1 / span ${totalCols}`}
+                  gridRow={gridRow}
+                  height={minorScale(1)}
+                  pointerEvents="none"
                 />
               );
             }
@@ -936,7 +964,7 @@ const MainArea: React.FC<{
                 {row.groupFirst && (
                   <Pane
                     gridColumn={1}
-                    gridRow={`${gridRow} / span ${row.groupSize}`}
+                    gridRow={`${gridRow} / span ${Math.max(1, row.groupSize * 2 - 1)}`}
                     display="flex"
                   >
                     <Card
@@ -964,6 +992,7 @@ const MainArea: React.FC<{
                     alignItems="center"
                     justifyContent="center"
                     padding={majorScale(1)}
+                    background="gray50"
                   >
                     <Heading>{row.cls}</Heading>
                   </Card>
@@ -1050,7 +1079,7 @@ function Ghost({
       }}
     >
       <Paragraph textAlign="center" fontSize="small">
-        {drag.dragKey}
+        {drag.subjectName ?? drag.dragKey}
       </Paragraph>
     </Card>
   )
