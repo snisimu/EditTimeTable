@@ -65,6 +65,64 @@ const slotPositions: [number, number[][]][] = (() => {
   return r;
 })();
 
+const widthGroupHeader = 48;
+const widthClassHeader = 56;
+
+type RowItem =
+  | { kind: "header" }
+  | {
+      kind: "class";
+      clsGroup: string;
+      cls: string;
+      groupFirst: boolean;
+      groupRowSpan: number;
+    };
+
+type SlotCol = {
+  dayIndex: number;
+  dayLabel: string;
+  blockIndex: number;
+  posIndex: number;
+};
+
+const buildRows = (groups: [string, string[]][]): RowItem[] => {
+  const rows: RowItem[] = [{ kind: "header" }];
+
+  groups.forEach(([clsGroup, classes]) => {
+    classes.forEach((cls, idx) => {
+      rows.push({
+        kind: "class",
+        clsGroup,
+        cls,
+        groupFirst: idx === 0,
+        groupRowSpan: classes.length,
+      });
+    });
+  });
+
+  return rows;
+};
+
+const buildSlotCols = (settings: [string, number[]][]): SlotCol[] => {
+  return settings.flatMap(([dayLabel, slotNums], dayIndex) =>
+    slotNums.flatMap((n, blockIndex) =>
+      Array.from({ length: n }, (_, posIndex) => ({
+        dayIndex,
+        dayLabel,
+        blockIndex,
+        posIndex,
+      }))
+    )
+  );
+};
+
+const makeSlotLabel = (
+  cls: string,
+  dayIndex: number,
+  blockIndex: number,
+  posIndex: number
+) => `${cls}${dayIndex}${blockIndex}${posIndex}:id`;
+
 // types
 
 type DragState = {
@@ -469,61 +527,6 @@ const MainArea: React.FC<{
   const menu = props.menu;
   const closeMenu = props.closeMenu;
 
-  const Day: React.FC<{
-    slotPositionDay: [number, number[][]];
-  }> = ({
-    slotPositionDay,
-  }) => {
-    const [d, pss] = slotPositionDay;
-    const pIdxss = () => {
-      let r: [number, number[]][] = new Array();
-      let idx = 0;
-      pss.forEach(ps => {
-        r.push([idx, ps]);
-        idx += 1;
-      });
-      return r;
-    }
-    return (
-      <Pane
-        display="flex"
-        flexDirection="column"
-        gap={gapClass}
-        padding={paddingDay}
-        background='tint2'
-        borderRadius={8}
-      >
-        <Card
-          height={heightDay}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Heading textAlign="center">{slotSettings[d][0]}</Heading>
-        </Card>
-        { classAlls.map(([clsGroup, classes]) => (
-          <Pane
-            flexDirection="column"
-          >
-          { classes.map(cls => (
-            <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-              { pIdxss().map(([i, ps]) => (
-                <Pane display="flex" flexDirection="row">
-                  { ps.map(p => (
-                    <Slot label={cls + d + i + p + ":id"} />
-                  ))}
-                </Pane>
-                ))
-              }
-            </Pane>
-            ))
-          }
-          </Pane>
-        ))}
-      </Pane>
-    );
-  }
-
   const Slot: React.FC<{label: string | null}> = ({label}) => {
     const dragging = drag !== null && drag.label === label;
     return (
@@ -550,6 +553,40 @@ const MainArea: React.FC<{
     );
   }
 
+  const rows = buildRows(classAlls);
+  const slotCols = buildSlotCols(slotSettings);
+
+  // 左2列（学年 / クラス）+ 右側にスロット列
+  const gridTemplateColumns = [
+    `${widthGroupHeader}px`,
+    `${widthClassHeader}px`,
+    ...slotCols.map(() => `${widthSlot}px`),
+  ].join(" ");
+
+  // 先頭行は曜日ヘッダ、それ以降はクラス行
+  const gridTemplateRows = rows
+    .map((r) => (r.kind === "header" ? `${heightDay}px` : `${heightSlot}px`))
+    .join(" ");
+
+  // dayIndexごとの列開始位置・列数を作る（曜日ヘッダspan用）
+  const dayColMeta = slotSettings.map(([dayLabel, slotNums], dayIndex) => {
+    const beforeCount = slotSettings
+      .slice(0, dayIndex)
+      .reduce((acc, [, nums]) => acc + nums.reduce((a, b) => a + b, 0), 0);
+
+    const colCount = slotNums.reduce((a, b) => a + b, 0);
+
+    // Gridの列番号は1始まり。左2列分あるので +3 から開始
+    const gridColStart = 3 + beforeCount;
+
+    return {
+      dayIndex,
+      dayLabel,
+      gridColStart,
+      colCount,
+    };
+  });
+  
   const ContextMenu: React.FC<{menu: MenuState}> = ({menu}) => {
     if (!menu.open) return null;
     const MenuItem: React.FC<{
@@ -673,87 +710,127 @@ const MainArea: React.FC<{
       </Pane>
 
       {/* table area */}
-
       <Pane
         ref={tableAreaRef}
         flex={1}
         overflowY="auto"
         overflowX="auto"
         padding={majorScale(1)}
-        display="flex"
-        flexDirection="row"
-        gap={majorScale(1)}
       >
-
         <Pane
-          flexDirection="column"
+          display="grid"
+          gridTemplateColumns={gridTemplateColumns}
+          gridTemplateRows={gridTemplateRows}
+          gap={majorScale(1)}
+          alignItems="stretch"
+          width="max-content"
         >
-        { classAlls.map(([clsGroup, classes]) => (
-          <Pane
+          {/* 左上の空白（学年列ヘッダ） */}
+          <Card
+            gridColumn={1}
+            gridRow={1}
+            height={heightDay}
             display="flex"
-            flexDirection="row"
-            padding={majorScale(1)}
-            background="gray200"
+            alignItems="center"
+            justifyContent="center"
+            background="gray100"
           >
-            {/* class group header */}
-            <Pane
-              display="flex"
-              flexDirection="column"
-              gap={gapClass}
-              padding={paddingDay}
-            >
-              <Card key="topleft" height={heightDay}>
-                <Heading>　</Heading>
-              </Card>
-              <Card
-                key={clsGroup+"header"}
-                padding={majorScale(1)}
-                alignItems="center"
-                justifyContent="center"
-                background="gray400"
-              >
-                <Heading>{clsGroup}</Heading>
-              </Card>
-            </Pane>
+            <Heading>　</Heading>
+          </Card>
 
-            {/* class headers */}
-            <Pane
+          {/* 左上の空白（クラス列ヘッダ） */}
+          <Card
+            gridColumn={2}
+            gridRow={1}
+            height={heightDay}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            background="gray100"
+          >
+            <Heading>　</Heading>
+          </Card>
+
+          {/* 曜日ヘッダ（span） */}
+          {dayColMeta.map(({ dayIndex, dayLabel, gridColStart, colCount }) => (
+            <Card
+              key={`day-header-${dayIndex}`}
+              gridColumn={`${gridColStart} / span ${colCount}`}
+              gridRow={1}
+              height={heightDay}
               display="flex"
-              flexDirection="column"
-              gap={gapClass}
-              padding={paddingDay}
+              alignItems="center"
+              justifyContent="center"
+              background="tint2"
             >
-              <Card key="topleft" height={heightDay}>
-                <Heading>　</Heading>
-              </Card>
-              { classes.map(cls => (
+              <Heading>{dayLabel}</Heading>
+            </Card>
+          ))}
+
+          {/* 左側の行ヘッダ（学年 / クラス） */}
+          {rows.map((row, rowIndex) => {
+            // rows[0] は header 行なので class 行は rowIndex >= 1
+            if (row.kind !== "class") return null;
+
+            return (
+              <Pane key={`row-left-${rowIndex}`} display="contents">
+                {/* 学年（先頭クラス行のみ表示し、縦に結合） */}
+                {row.groupFirst && (
+                  <Card
+                    gridColumn={1}
+                    gridRow={`${rowIndex + 1} / span ${row.groupRowSpan}`} // +1は1始まり補正
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    background="gray300"
+                    minHeight={heightSlot * row.groupRowSpan + majorScale(1) * (row.groupRowSpan - 1)}
+                  >
+                    <Heading>{row.clsGroup}</Heading>
+                  </Card>
+                )}
+
+                {/* クラス名 */}
                 <Card
-                  key={cls+"header"}
+                  gridColumn={2}
+                  gridRow={rowIndex + 1}
                   height={heightSlot}
-                  minHeight={heightSlot}
-                  maxHeight={heightSlot}
                   padding={majorScale(1)}
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
+                  background="white"
                 >
-                  <Heading>{cls}</Heading>
+                  <Heading>{row.cls}</Heading>
                 </Card>
-              ))}
-            </Pane>
-          </Pane>
-          ))
-        }
+              </Pane>
+            );
+          })}
+
+          {/* 本体セル（Slot） */}
+          {rows.map((row, rowIndex) => {
+            if (row.kind !== "class") return null;
+
+            return slotCols.map((col, colIndex) => (
+              <Slot
+                key={`slot-${row.cls}-${col.dayIndex}-${col.blockIndex}-${col.posIndex}`}
+                label={makeSlotLabel(row.cls, col.dayIndex, col.blockIndex, col.posIndex)}
+                // Evergreen の Card は style/grid props が通るので直接置ける
+                // ※ Slotコンポーネント側に gridColumn / gridRow を渡すため props追加してもOK
+              />
+            )).map((slotEl, colIndex) => {
+              const col = slotCols[colIndex];
+              return (
+                <Pane
+                  key={`slot-wrap-${row.cls}-${col.dayIndex}-${col.blockIndex}-${col.posIndex}`}
+                  gridColumn={3 + colIndex}
+                  gridRow={rowIndex + 1}
+                >
+                  {slotEl}
+                </Pane>
+              );
+            });
+          })}
         </Pane>
-
-        { slotPositions.map(slotPositionDay => (
-            <Day
-              key={slotPositionDay[0]}
-              slotPositionDay={slotPositionDay}
-            />
-          ))
-        }
-
       </Pane>
 
       <ContextMenu
