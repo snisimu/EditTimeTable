@@ -64,13 +64,28 @@ const heightDay = 40;
 const widthBlockGap = minorScale(1); // AM/PM（ブロック間）の gap 幅
 const widthDayGap = majorScale(1); // 曜日間の gap 幅
 
-// items
+// subjects
 
 type Class = [string, string];
 type SlotPosition = [number, number, number]; // dayIndex, blockIndex, posIndex
 type Subject = {
+  id: number;
   name: string;
   pinned?: boolean;
+  posKey?: string;
+};
+const toPosKey = (cls: Class, pos: SlotPosition) =>
+  `${cls[0]}|${cls[1]}|${pos[0]}|${pos[1]}|${pos[2]}`;
+
+const fromPosKey = (key: string): [Class, SlotPosition] | null => {
+  const parts = key.split("|");
+  if (parts.length !== 5) return null;
+  const [g, c, d, b, p] = parts;
+  const dayIndex = Number(d);
+  const blockIndex = Number(b);
+  const posIndex = Number(p);
+  if (![dayIndex, blockIndex, posIndex].every(Number.isFinite)) return null;
+  return [[g, c], [dayIndex, blockIndex, posIndex]];
 };
 
 // types
@@ -80,24 +95,35 @@ type DragState = {
   toRectX: number;
   toRectY: number;
   el?: HTMLDivElement;
-  label?: string;
+  dragKey?: string;
 }
 
 type MenuState = {
   open: boolean;
   x: number;
   y: number;
-  label?: string;
+  dragKey?: string;
 };
 
 // components
 
 export default function App() {
 
-  const [subjcts, setSubjcts] = useState<Map<[Class, SlotPosition], Subject>>(new Map(
-    [ [ [["1", "A"], [0, 0, 0]], { name: "Math" } ]
-    ]
-  ));
+  const [subjects, setSubjects] = useState<Map<string, Subject>>(
+    new Map(
+    [ [ toPosKey(["1", "A"], [0, 0, 0]),
+        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]) },
+      ]
+    , [ toPosKey(["2", "B"], [1, 1, 0]),
+        { id: 2, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+      ]
+    ])
+  );
+
+  // subjects の更新後（state反映後）にログする
+  useEffect(() => {
+    console.log("subjects(updated)", Array.from(subjects.entries()));
+  }, [subjects]);
   
   const [drag, setDrag] = useState<DragState | null>(null);
 
@@ -142,7 +168,7 @@ export default function App() {
     });
   };
 
-  const onPointerDown = (label: string, e: React.PointerEvent<HTMLDivElement>) => {
+  const onPointerDown = (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget as HTMLDivElement;
     if (!el) return;
 
@@ -163,7 +189,7 @@ export default function App() {
       toRectX: e.clientX - r.left,
       toRectY: e.clientY - r.top,
       el,
-      label,
+      dragKey,
     };
     setDrag(nextDrag);
     dragRef.current = nextDrag; // ★ 即座に最新化（useEffect待ちしない）
@@ -328,7 +354,7 @@ export default function App() {
   const [menu, setMenu] = useState<MenuState>({ open: false, x: 0, y: 0 });
 
   const onContextMenu = (
-    label: string,
+    dragKey: string,
     e: React.MouseEvent<HTMLDivElement>
   ) => {
     if (drag) return;
@@ -337,9 +363,9 @@ export default function App() {
       open: true,
       x: e.clientX,
       y: e.clientY,
-      label,
+      dragKey,
     });
-    console.log("onContextMenu", { label, clientX: e.clientX, clientY: e.clientY });
+    console.log("onContextMenu", { dragKey, clientX: e.clientX, clientY: e.clientY });
   };
 
   const closeMenu = () => setMenu((m) => ({ ...m, open: false }));
@@ -401,15 +427,74 @@ export default function App() {
 
   const handleDrop = (x: number, y: number) => {
     if (!drag) return;
-    const el = document.elementFromPoint(x, y);
-    if (!el) return;
+    const el = document.elementFromPoint(x, y) as Element | null;
+    if (!el) {
+      console.log("DROP: elementFromPoint returned null", { x, y });
+      return;
+    }
 
-    const slotEl = el.closest("[data-slot-id]");
+    const slotEl = el.closest("[data-pos-key]") as Element | null;
     if (slotEl) {
-      const labelTo = slotEl.getAttribute("data-slot-id");
-      console.log({labelFrom: drag.label, labelTo});
+      const posKeyTo = slotEl.getAttribute("data-pos-key");
+      const dragKeyFrom = drag.dragKey;
+      console.log({ dragKeyFrom, posKeyTo });
+
+      if (!posKeyTo || !dragKeyFrom) return;
+
+      const fromParsed = fromPosKey(dragKeyFrom);
+      const toParsed = fromPosKey(posKeyTo);
+
+      if (!toParsed) {
+        console.log("DROP: posKeyTo is not a timetable posKey", { posKeyTo });
+        return;
+      }
+
+      // sidebar item -> timetable slot: place a subject
+      if (!fromParsed) {
+        setSubjects((prev) => {
+          const next = new Map(prev);
+          next.set(posKeyTo, { id: Date.now(), name: dragKeyFrom, posKey: posKeyTo });
+          return next;
+        });
+        return;
+      }
+
+      // timetable slot -> timetable slot: move subject
+      if (fromParsed) {
+        setSubjects((prev) => {
+          const next = new Map(prev);
+          if (dragKeyFrom === posKeyTo) return prev;
+
+          const fromKey = dragKeyFrom;
+          const toKey = posKeyTo;
+
+          const fromSubj = next.get(fromKey);
+          if (!fromSubj) return prev;
+
+          const toSubj = next.get(toKey);
+
+          // move from -> to
+          next.set(toKey, { ...fromSubj, posKey: toKey });
+
+          // if destination had a subject, move it back to from (swap)
+          if (toSubj) {
+            next.set(fromKey, { ...toSubj, posKey: fromKey });
+          } else {
+            next.delete(fromKey);
+          }
+
+          return next;
+        });
+      }
     } else {
-      console.log("DROP OUTSIDE");
+      const trail: string[] = [];
+      let cur: Element | null = el;
+      for (let i = 0; i < 6 && cur; i++) {
+        const key = cur.getAttribute("data-pos-key");
+        trail.push(`${cur.tagName.toLowerCase()}${key ? `[data-pos-key=${key}]` : ""}`);
+        cur = cur.parentElement;
+      }
+      console.log("DROP OUTSIDE (no [data-pos-key] found)", { x, y, hit: el.tagName, trail });
     }
   };
 
@@ -446,6 +531,7 @@ export default function App() {
         menu={menu}
         setMenu={setMenu}
         closeMenu={closeMenu}
+        subjects={subjects}
       />
 
       <Ghost
@@ -459,8 +545,8 @@ export default function App() {
 
 const MainArea: React.FC<{
   drag: DragState | null;
-  onPointerDown: (label: string, e: React.PointerEvent<HTMLDivElement>) => void;
-  onContextMenu: (label: string, e: React.MouseEvent<HTMLDivElement>) => void;
+  onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
+  onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
   onPointerUp: any;
   onPointerCancel: any;
@@ -470,6 +556,7 @@ const MainArea: React.FC<{
   menu: MenuState;
   setMenu: React.Dispatch<React.SetStateAction<MenuState>>;
   closeMenu: () => void;
+  subjects: Map<string, Subject>;
 }> = (props) => {
 
   const drag = props.drag;
@@ -484,6 +571,7 @@ const MainArea: React.FC<{
   const menu = props.menu;
   const setMenu = props.setMenu;
   const closeMenu = props.closeMenu;
+  const subjects = props.subjects;
 
   const widthGroupHeader = 50;
   const widthClassHeader = 50;
@@ -562,12 +650,12 @@ const MainArea: React.FC<{
     return { dayLabel, dayIndex, start, span };
   });
 
-  const makeSlotLabel = (
-    cls: string,
+  const makePosKey = (
+    cls: Class,
     dayIndex: number,
     blockIndex: number,
     posIndex: number
-  ) => `${cls}${dayIndex}${blockIndex}${posIndex}:id`;
+  ) => toPosKey(cls, [dayIndex, blockIndex, posIndex]);
 
   type GridRow =
     | { kind: "block-gap"; blockIndex: number }
@@ -613,14 +701,14 @@ const MainArea: React.FC<{
     return blockRows;
   });
 
-  const Slot: React.FC<{ label: string }> = ({ label }) => {
-    const dragging = drag !== null && drag.label === label;
+  const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
+    const dragging = drag !== null && drag.dragKey === dragKey;
     return (
       <Card
-        data-slot-id={label}
-        onPointerDown={(e) => onPointerDown(label, e)}
+        data-pos-key={dragKey}
+        onPointerDown={(e) => onPointerDown(dragKey, e)}
         onPointerUp={onPointerUp}
-        onContextMenu={(e) => onContextMenu(label, e)}
+        onContextMenu={(e) => onContextMenu(dragKey, e)}
         height={heightSlot}
         width={widthSlot}
         padding={majorScale(1)}
@@ -633,7 +721,7 @@ const MainArea: React.FC<{
           fontSize="small"
           color={dragging ? "silver" : "black"}
         >
-          {label.split(":")[0]}
+          {text ?? dragKey}
         </Paragraph>
       </Card>
     );
@@ -743,26 +831,26 @@ const MainArea: React.FC<{
         gap={majorScale(4)}
       >
         <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-        <Slot label="itemA:" />
-        <Slot label="itemB:" />
-        <Slot label="itemC:" />
-        <Slot label="itemD:" />
-        <Slot label="itemE:" />
-        <Slot label="itemF:" />
-        <Slot label="itemG:" />
-        <Slot label="itemH:" />
-        <Slot label="itemI:" />
-        <Slot label="itemJ:" />
-        <Slot label="itemK:" />
-        <Slot label="itemL:" />
-        <Slot label="itemM:" />
-        <Slot label="itemN:" />
-        <Slot label="itemO:" />
-        <Slot label="itemP:" />
-        <Slot label="itemQ:" />
-        <Slot label="itemR:" />
-        <Slot label="itemS:" />
-        <Slot label="itemT:" />
+        <Slot dragKey="itemA" text="itemA" />
+        <Slot dragKey="itemB" text="itemB" />
+        <Slot dragKey="itemC" text="itemC" />
+        <Slot dragKey="itemD" text="itemD" />
+        <Slot dragKey="itemE" text="itemE" />
+        <Slot dragKey="itemF" text="itemF" />
+        <Slot dragKey="itemG" text="itemG" />
+        <Slot dragKey="itemH" text="itemH" />
+        <Slot dragKey="itemI" text="itemI" />
+        <Slot dragKey="itemJ" text="itemJ" />
+        <Slot dragKey="itemK" text="itemK" />
+        <Slot dragKey="itemL" text="itemL" />
+        <Slot dragKey="itemM" text="itemM" />
+        <Slot dragKey="itemN" text="itemN" />
+        <Slot dragKey="itemO" text="itemO" />
+        <Slot dragKey="itemP" text="itemP" />
+        <Slot dragKey="itemQ" text="itemQ" />
+        <Slot dragKey="itemR" text="itemR" />
+        <Slot dragKey="itemS" text="itemS" />
+        <Slot dragKey="itemT" text="itemT" />
       </Pane>
 
       {/* table area */}
@@ -905,14 +993,17 @@ const MainArea: React.FC<{
                       gridColumn={gridColumn}
                       gridRow={gridRow}
                     >
-                      <Slot
-                        label={makeSlotLabel(
-                          row.cls,
+                      {(() => {
+                        const posKey = makePosKey(
+                          [row.clsGroup, row.cls],
                           col.dayIndex,
                           col.blockIndex,
                           col.posIndex
-                        )}
-                      />
+                        );
+                        const subj = subjects.get(posKey);
+                        const text = subj?.name ?? "";
+                        return <Slot dragKey={posKey} text={text} />;
+                      })()}
                     </Pane>
                   );
                 })}
@@ -959,7 +1050,7 @@ function Ghost({
       }}
     >
       <Paragraph textAlign="center" fontSize="small">
-        {drag.label?.split(":")[0]}
+        {drag.dragKey}
       </Paragraph>
     </Card>
   )
