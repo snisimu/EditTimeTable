@@ -44,7 +44,7 @@ const paddingDay = majorScale(1);
 
 // auxiliary
 
-const slotPositions: (() => [number, number[][]][]) = () => {
+const slotPositions: [number, number[][]][] = (() => {
   let r: [number, number[][]][] = new Array();
   let d = 0;
   slotSettings.forEach(([_, slotNums]) => {
@@ -52,7 +52,7 @@ const slotPositions: (() => [number, number[][]][]) = () => {
     d += 1;
   });
   return r;
-}
+})();
 
 // types
 
@@ -688,7 +688,7 @@ const MainArea: React.FC<{
           ))}
         </Pane>
 
-        { slotPositions().map(slotPositionDay => (
+        { slotPositions.map(slotPositionDay => (
           <Day
             key={slotPositionDay[0]}
             slotPositionDay={slotPositionDay}
