@@ -53,76 +53,6 @@ const heightDay = 20;
 const gapClass = majorScale(1);
 const paddingDay = majorScale(1);
 
-// auxiliary
-
-const slotPositions: [number, number[][]][] = (() => {
-  let r: [number, number[][]][] = new Array();
-  let d = 0;
-  slotSettings.forEach(([_, slotNums]) => {
-    r.push([d, slotNums.map(n => Array.from({ length: n }, (_, i) => i))]);
-    d += 1;
-  });
-  return r;
-})();
-
-const widthGroupHeader = 48;
-const widthClassHeader = 56;
-
-type RowItem =
-  | { kind: "header" }
-  | {
-      kind: "class";
-      clsGroup: string;
-      cls: string;
-      groupFirst: boolean;
-      groupRowSpan: number;
-    };
-
-type SlotCol = {
-  dayIndex: number;
-  dayLabel: string;
-  blockIndex: number;
-  posIndex: number;
-};
-
-const buildRows = (groups: [string, string[]][]): RowItem[] => {
-  const rows: RowItem[] = [{ kind: "header" }];
-
-  groups.forEach(([clsGroup, classes]) => {
-    classes.forEach((cls, idx) => {
-      rows.push({
-        kind: "class",
-        clsGroup,
-        cls,
-        groupFirst: idx === 0,
-        groupRowSpan: classes.length,
-      });
-    });
-  });
-
-  return rows;
-};
-
-const buildSlotCols = (settings: [string, number[]][]): SlotCol[] => {
-  return settings.flatMap(([dayLabel, slotNums], dayIndex) =>
-    slotNums.flatMap((n, blockIndex) =>
-      Array.from({ length: n }, (_, posIndex) => ({
-        dayIndex,
-        dayLabel,
-        blockIndex,
-        posIndex,
-      }))
-    )
-  );
-};
-
-const makeSlotLabel = (
-  cls: string,
-  dayIndex: number,
-  blockIndex: number,
-  posIndex: number
-) => `${cls}${dayIndex}${blockIndex}${posIndex}:id`;
-
 // types
 
 type DragState = {
@@ -527,6 +457,64 @@ const MainArea: React.FC<{
   const menu = props.menu;
   const closeMenu = props.closeMenu;
 
+  const widthGroupHeader = 50;
+  const widthClassHeader = 50;
+
+  type RowItem =
+    | { kind: "header" }
+    | {
+        kind: "class";
+        clsGroup: string;
+        cls: string;
+        groupFirst: boolean;
+        groupRowSpan: number;
+      };
+
+  type SlotCol = {
+    dayIndex: number;
+    dayLabel: string;
+    blockIndex: number;
+    posIndex: number;
+  };
+
+  const buildRows = (groups: [string, string[]][]): RowItem[] => {
+    const rows: RowItem[] = [{ kind: "header" }];
+
+    groups.forEach(([clsGroup, classes]) => {
+      classes.forEach((cls, idx) => {
+        rows.push({
+          kind: "class",
+          clsGroup,
+          cls,
+          groupFirst: idx === 0,
+          groupRowSpan: classes.length,
+        });
+      });
+    });
+
+    return rows;
+  };
+
+  const buildSlotCols = (settings: [string, number[]][]): SlotCol[] => {
+    return settings.flatMap(([dayLabel, slotNums], dayIndex) =>
+      slotNums.flatMap((n, blockIndex) =>
+        Array.from({ length: n }, (_, posIndex) => ({
+          dayIndex,
+          dayLabel,
+          blockIndex,
+          posIndex,
+        }))
+      )
+    );
+  };
+
+  const makeSlotLabel = (
+    cls: string,
+    dayIndex: number,
+    blockIndex: number,
+    posIndex: number
+  ) => `${cls}${dayIndex}${blockIndex}${posIndex}:id`;
+
   const Slot: React.FC<{label: string | null}> = ({label}) => {
     const dragging = drag !== null && drag.label === label;
     return (
@@ -587,6 +575,16 @@ const MainArea: React.FC<{
     };
   });
   
+  const GridSlotCell: React.FC<{
+    gridColumn: number;
+    gridRow: number;
+    children: React.ReactNode;
+  }> = ({ gridColumn, gridRow, children }) => (
+    <Pane gridColumn={gridColumn} gridRow={gridRow}>
+      {children}
+    </Pane>
+  );
+
   const ContextMenu: React.FC<{menu: MenuState}> = ({menu}) => {
     if (!menu.open) return null;
     const MenuItem: React.FC<{
@@ -782,7 +780,7 @@ const MainArea: React.FC<{
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
-                    background="gray300"
+                    background="gray200"
                     minHeight={heightSlot * row.groupRowSpan + majorScale(1) * (row.groupRowSpan - 1)}
                   >
                     <Heading>{row.clsGroup}</Heading>
@@ -811,24 +809,16 @@ const MainArea: React.FC<{
             if (row.kind !== "class") return null;
 
             return slotCols.map((col, colIndex) => (
-              <Slot
+              <GridSlotCell
                 key={`slot-${row.cls}-${col.dayIndex}-${col.blockIndex}-${col.posIndex}`}
-                label={makeSlotLabel(row.cls, col.dayIndex, col.blockIndex, col.posIndex)}
-                // Evergreen の Card は style/grid props が通るので直接置ける
-                // ※ Slotコンポーネント側に gridColumn / gridRow を渡すため props追加してもOK
-              />
-            )).map((slotEl, colIndex) => {
-              const col = slotCols[colIndex];
-              return (
-                <Pane
-                  key={`slot-wrap-${row.cls}-${col.dayIndex}-${col.blockIndex}-${col.posIndex}`}
-                  gridColumn={3 + colIndex}
-                  gridRow={rowIndex + 1}
-                >
-                  {slotEl}
-                </Pane>
-              );
-            });
+                gridColumn={3 + colIndex}
+                gridRow={rowIndex + 1}
+              >
+                <Slot
+                  label={makeSlotLabel(row.cls, col.dayIndex, col.blockIndex, col.posIndex)}
+                />
+              </GridSlotCell>
+            ));
           })}
         </Pane>
       </Pane>
