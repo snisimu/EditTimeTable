@@ -64,6 +64,15 @@ const heightDay = 40;
 const widthBlockGap = minorScale(1); // AM/PM（ブロック間）の gap 幅
 const widthDayGap = majorScale(1); // 曜日間の gap 幅
 
+// items
+
+type Class = [string, string];
+type SlotPosition = [number, number, number]; // dayIndex, blockIndex, posIndex
+type Subject = {
+  name: string;
+  pinned?: boolean;
+};
+
 // types
 
 type DragState = {
@@ -85,6 +94,11 @@ type MenuState = {
 
 export default function App() {
 
+  const [subjcts, setSubjcts] = useState<Map<[Class, SlotPosition], Subject>>(new Map(
+    [ [ [["1", "A"], [0, 0, 0]], { name: "Math" } ]
+    ]
+  ));
+  
   const [drag, setDrag] = useState<DragState | null>(null);
 
   const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
