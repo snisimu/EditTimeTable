@@ -471,10 +471,8 @@ const MainArea: React.FC<{
 
   const Day: React.FC<{
     slotPositionDay: [number, number[][]];
-    classes: string[];
   }> = ({
     slotPositionDay,
-    classes
   }) => {
     const [d, pss] = slotPositionDay;
     const pIdxss = () => {
@@ -503,15 +501,23 @@ const MainArea: React.FC<{
         >
           <Heading textAlign="center">{slotSettings[d][0]}</Heading>
         </Card>
-        { classes.map(cls => (
-          <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
-            { pIdxss().map(([i, ps]) => (
-              <Pane display="flex" flexDirection="row">
-                { ps.map(p => (
-                  <Slot label={cls + d + i + p + ":id"} />
-                ))}
-              </Pane>
-            ))}
+        { classAlls.map(([clsGroup, classes]) => (
+          <Pane
+            flexDirection="column"
+          >
+          { classes.map(cls => (
+            <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
+              { pIdxss().map(([i, ps]) => (
+                <Pane display="flex" flexDirection="row">
+                  { ps.map(p => (
+                    <Slot label={cls + d + i + p + ":id"} />
+                  ))}
+                </Pane>
+                ))
+              }
+            </Pane>
+            ))
+          }
           </Pane>
         ))}
       </Pane>
@@ -675,10 +681,13 @@ const MainArea: React.FC<{
         overflowX="auto"
         padding={majorScale(1)}
         display="flex"
-        flexDirection="column"
+        flexDirection="row"
         gap={majorScale(1)}
       >
 
+        <Pane
+          flexDirection="column"
+        >
         { classAlls.map(([clsGroup, classes]) => (
           <Pane
             display="flex"
@@ -699,10 +708,8 @@ const MainArea: React.FC<{
               <Card
                 key={clsGroup+"header"}
                 padding={majorScale(1)}
-                display="flex"
                 alignItems="center"
                 justifyContent="center"
-                flex="1"
                 background="gray400"
               >
                 <Heading>{clsGroup}</Heading>
@@ -734,16 +741,18 @@ const MainArea: React.FC<{
                 </Card>
               ))}
             </Pane>
-
-            { slotPositions.map(slotPositionDay => (
-              <Day
-                key={slotPositionDay[0]}
-                slotPositionDay={slotPositionDay}
-                classes={classes}
-              />
-            ))}
           </Pane>
-        ))}
+          ))
+        }
+        </Pane>
+
+        { slotPositions.map(slotPositionDay => (
+            <Day
+              key={slotPositionDay[0]}
+              slotPositionDay={slotPositionDay}
+            />
+          ))
+        }
 
       </Pane>
 
