@@ -34,7 +34,18 @@ const slotSettings: [string, number[]][] =
       ]
     ]
   ]
-const classAlls: string[] = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+const classAlls: [string, string[]][] = 
+  [ ["1",
+      [ "A"
+      , "B"
+      ]
+    ]
+  , ["2",
+      [ "A"
+      , "B"
+      ]
+    ]
+  ]
 
 const heightSlot = 40;
 const widthSlot = 80;
@@ -458,7 +469,13 @@ const MainArea: React.FC<{
   const menu = props.menu;
   const closeMenu = props.closeMenu;
 
-  const Day: React.FC<{slotPositionDay: [number, number[][]]}> = ({slotPositionDay}) => {
+  const Day: React.FC<{
+    slotPositionDay: [number, number[][]];
+    classes: string[];
+  }> = ({
+    slotPositionDay,
+    classes
+  }) => {
     const [d, pss] = slotPositionDay;
     const pIdxss = () => {
       let r: [number, number[]][] = new Array();
@@ -486,7 +503,7 @@ const MainArea: React.FC<{
         >
           <Heading textAlign="center">{slotSettings[d][0]}</Heading>
         </Card>
-        { classAlls.map(cls => (
+        { classes.map(cls => (
           <Pane display="flex" flexDirection="row" gap={majorScale(1)}>
             { pIdxss().map(([i, ps]) => (
               <Pane display="flex" flexDirection="row">
@@ -656,43 +673,76 @@ const MainArea: React.FC<{
         flex={1}
         overflowY="auto"
         overflowX="auto"
-        padding={majorScale(2)}
+        padding={majorScale(1)}
         display="flex"
-        flexDirection="row"
+        flexDirection="column"
         gap={majorScale(1)}
       >
 
-        {/* class headers */}
-        <Pane
-          display="flex"
-          flexDirection="column"
-          gap={gapClass}
-          padding={paddingDay}
-        >
-          <Card key="topleft" height={heightDay}>
-            <Heading>　</Heading>
-          </Card>
-          { classAlls.map(cls => (
-            <Card
-              key={cls+"header"}
-              height={heightSlot}
-              minHeight={heightSlot}
-              maxHeight={heightSlot}
-              padding={majorScale(1)}
+        { classAlls.map(([clsGroup, classes]) => (
+          <Pane
+            display="flex"
+            flexDirection="row"
+            padding={majorScale(1)}
+            background="gray200"
+          >
+            {/* class group header */}
+            <Pane
               display="flex"
-              alignItems="center"
-              justifyContent="center"
+              flexDirection="column"
+              gap={gapClass}
+              padding={paddingDay}
             >
-              <Heading>{cls}</Heading>
-            </Card>
-          ))}
-        </Pane>
+              <Card key="topleft" height={heightDay}>
+                <Heading>　</Heading>
+              </Card>
+              <Card
+                key={clsGroup+"header"}
+                padding={majorScale(1)}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                flex="1"
+                background="gray400"
+              >
+                <Heading>{clsGroup}</Heading>
+              </Card>
+            </Pane>
 
-        { slotPositions.map(slotPositionDay => (
-          <Day
-            key={slotPositionDay[0]}
-            slotPositionDay={slotPositionDay}
-          />
+            {/* class headers */}
+            <Pane
+              display="flex"
+              flexDirection="column"
+              gap={gapClass}
+              padding={paddingDay}
+            >
+              <Card key="topleft" height={heightDay}>
+                <Heading>　</Heading>
+              </Card>
+              { classes.map(cls => (
+                <Card
+                  key={cls+"header"}
+                  height={heightSlot}
+                  minHeight={heightSlot}
+                  maxHeight={heightSlot}
+                  padding={majorScale(1)}
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Heading>{cls}</Heading>
+                </Card>
+              ))}
+            </Pane>
+
+            { slotPositions.map(slotPositionDay => (
+              <Day
+                key={slotPositionDay[0]}
+                slotPositionDay={slotPositionDay}
+                classes={classes}
+              />
+            ))}
+          </Pane>
         ))}
 
       </Pane>
