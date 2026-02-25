@@ -56,11 +56,37 @@ const classAlls: [string, string[]][][] =
         ]
       ]
     ]
+  , [ ["4",
+        [ "A"
+        , "B"
+        , "C"
+        , "D"
+        , "E"
+        , "F"
+        , "G"
+        , "H"
+        , "I"
+        , "J"
+        , "K"
+        , "L"
+        , "M"
+        , "N"
+        , "O"
+        , "P"
+        , "Q"
+        , "R"
+        , "S"
+        , "T"
+        ]
+      ]
+    ]
   ]
 
 const heightSlot = 40;
 const widthSlot = 80;
-const heightDay = 40;
+const heightDay = 30;
+const widthGroupHeader = 30;
+const widthClassHeader = 40;
 const widthBlockGap = minorScale(1); // AM/PM（ブロック間）の gap 幅
 const widthDayGap = majorScale(1); // 曜日間の gap 幅
 
@@ -115,8 +141,20 @@ export default function App() {
     [ [ toPosKey(["1", "A"], [0, 0, 0]),
         { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]) },
       ]
+    , [ toPosKey(["1", "A"], [0, 0, 1]),
+        { id: 2, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 1]) },
+      ]
+    , [ toPosKey(["1", "A"], [1, 0, 0]),
+        { id: 3, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 0]) },
+      ]
+    , [ toPosKey(["1", "A"], [1, 0, 1]),
+        { id: 4, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 1]) },
+      ]
+    , [ toPosKey(["2", "B"], [1, 0, 0]),
+        { id: 5, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
+      ]
     , [ toPosKey(["2", "B"], [1, 1, 0]),
-        { id: 2, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+        { id: 6, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
       ]
     ])
   );
@@ -577,9 +615,6 @@ const MainArea: React.FC<{
   const setMenu = props.setMenu;
   const closeMenu = props.closeMenu;
   const subjects = props.subjects;
-
-  const widthGroupHeader = 50;
-  const widthClassHeader = 50;
 
   type GridSlotCol = {
     kind: "slot";
