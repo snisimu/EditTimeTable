@@ -457,47 +457,21 @@ export default function App() {
       }
 
       // Determine whether dropping here would actually change state.
-      // If it would be a no-op (same group, same index), do not show the insert mark.
+      // If it would be a no-op (same visual position), do not show the insert mark.
       const wouldChange = (() => {
         if (!fromParsed) return true;
 
         const [, fromPos] = fromParsed;
         const fromDayIndex = fromPos[0];
-        const fromPosIndex = fromPos[2];
 
         // From timetable -> sidebar always changes (it creates/moves into sidebar).
         if (fromDayIndex >= 0) return true;
 
-        // Mirror handleDrop's targetDayIndex selection (based on element below insertion).
-        let targetDayIndex = -1;
-        if (els.length === 0) {
-          targetDayIndex = -1;
-        } else if (insertIndex <= 0) {
-          const k = els[0].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
-        } else if (insertIndex >= els.length) {
-          const k = els[els.length - 1].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
-        } else {
-          const k = els[insertIndex].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
-        }
-        if (targetDayIndex >= 0) targetDayIndex = -1;
-
-        // Group insertion index: count how many items of targetDayIndex are before insertIndex.
-        let groupInsertIndex = 0;
-        for (let i = 0; i < insertIndex; i++) {
-          const k = els[i]?.getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          if (!p) continue;
-          if (p[1][0] === targetDayIndex) groupInsertIndex++;
-        }
-
-        // No-op if inserting into the same group at the same index.
-        if (targetDayIndex === fromDayIndex && groupInsertIndex === fromPosIndex) return false;
+        // No-op if the visual insertion position matches the original.
+        // nodes includes all sidebar items; els excludes the dragged item.
+        // The dragged item's original index in nodes equals the no-op insertIndex in els.
+        const fromOriginalIndex = nodes.findIndex((n) => n.getAttribute("data-pos-key") === fromKey);
+        if (fromOriginalIndex === insertIndex) return false;
         return true;
       })();
 
