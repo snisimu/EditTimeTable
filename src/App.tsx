@@ -194,11 +194,14 @@ export default function App() {
     , [ toPosKey(["1", "A"], [1, 0, 1]),
         { id: 4, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 1]) },
       ]
+    , [ toPosKey(["1", "A"], [-1, 0, 0]),
+        { id: 5, name: "History", posKey: toPosKey(["1", "A"], [-1, 0, 0]) },
+      ]
     , [ toPosKey(["2", "B"], [1, 0, 0]),
-        { id: 5, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
+        { id: 6, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
       ]
     , [ toPosKey(["2", "B"], [1, 1, 0]),
-        { id: 6, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+        { id: 7, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
       ]
     ])
   );
@@ -530,6 +533,7 @@ export default function App() {
 
       const fromParsed = fromPosKey(dragKeyFrom);
       const toParsed = fromPosKey(posKeyTo);
+      const fromIsSidebarPool = !!fromParsed && fromParsed[1][0] < 0;
 
       if (!toParsed) {
         console.log("DROP: posKeyTo is not a timetable posKey", { posKeyTo });
@@ -537,9 +541,34 @@ export default function App() {
       }
 
       // sidebar item -> timetable slot: place a subject
-      if (!fromParsed) {
+      if (!fromParsed || fromIsSidebarPool) {
         setSubjects((prev) => {
           const next = new Map(prev);
+
+          // subject from sidebar pool (dayIndex < 0): move/swap
+          if (fromIsSidebarPool) {
+            const fromKey = dragKeyFrom;
+            const toKey = posKeyTo;
+
+            if (fromKey === toKey) return prev;
+
+            const fromSubj = next.get(fromKey);
+            if (!fromSubj) return prev;
+
+            const toSubj = next.get(toKey);
+
+            next.set(toKey, { ...fromSubj, posKey: toKey });
+
+            if (toSubj) {
+              next.set(fromKey, { ...toSubj, posKey: fromKey });
+            } else {
+              next.delete(fromKey);
+            }
+
+            return next;
+          }
+
+          // plain sidebar item (not a posKey): create a new subject
           next.set(posKeyTo, { id: Date.now(), name: dragKeyFrom, posKey: posKeyTo });
           return next;
         });
@@ -659,6 +688,11 @@ const MainArea: React.FC<{
   const setMenu = props.setMenu;
   const closeMenu = props.closeMenu;
   const subjects = props.subjects;
+
+  const sidebarSubjects = Array.from(subjects.entries())
+    .map(([posKey, subj]) => ({ posKey, subj, parsed: fromPosKey(posKey) }))
+    .filter(({ parsed }) => parsed && parsed[1][0] < 0)
+    .sort((a, b) => a.subj.name.localeCompare(b.subj.name) || a.subj.id - b.subj.id);
 
   type GridSlotCol = {
     kind: "slot";
@@ -907,7 +941,9 @@ const MainArea: React.FC<{
         minWidth={110}
         gap={majorScale(4)}
       >
-        {/* <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading> */}
+        {sidebarSubjects.map(({ posKey, subj }) => (
+          <Slot key={posKey} dragKey={posKey} text={subj.name} />
+        ))}
       </Pane>
 
       {/* table area */}
