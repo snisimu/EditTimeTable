@@ -90,6 +90,30 @@ const widthClassHeader = 40;
 const widthBlockGap = minorScale(1); // AM/PM（ブロック間）の gap 幅
 const widthDayGap = majorScale(1); // 曜日間の gap 幅
 
+export const colors = {
+  // Background
+  background: "#F5F7FA",   // 極薄ブルーグレー
+  surface:    "#FFFFFF",
+  surfaceAlt: "#F1F5F9",
+
+  // Borders
+  border:     "#E2E8F0",
+
+  // Text
+  textMain:   "#0F172A",
+  textSub:    "#475569",
+
+  // Primary
+  primary:    "#1E3A8A",    // 深いネイビー
+  primaryHover:"#1D4ED8",
+  primarySoft: "#DBEAFE",
+
+  // Semantic
+  success:    "#166534",
+  warning:    "#B45309",
+  danger:     "#B91C1C"
+}
+
 // subjects
 
 type Class = [string, string];
@@ -130,6 +154,20 @@ type MenuState = {
   x: number;
   y: number;
   dragKey?: string;
+};
+
+const SubjectCardView: React.FC<{
+  text: string;
+  color?: string;
+}> = ({
+  text,
+  color,
+}) => {
+  return (
+    <Paragraph textAlign="center" fontSize="small" color={color}>
+      {text}
+    </Paragraph>
+  );
 };
 
 // components
@@ -203,7 +241,7 @@ export default function App() {
       if (!g || !d) return;
 
       const { x, y } = pointerRef.current;
-      g.style.transform = `translate(${x - d.toRectX}px, ${y - d.toRectY}px)`;
+      g.style.transform = `translate(${x - d.toRectX}px, ${y - d.toRectY}px) scale(1.03)`;
     });
   };
 
@@ -762,15 +800,13 @@ const MainArea: React.FC<{
         padding={majorScale(1)}
         elevation={dragging ? 0 : hasSubject ? 1 : 0}
         background="white"
+        opacity={dragging ? 0.5 : 1}
         cursor="grab"
       >
-        <Paragraph
-          textAlign="center"
-          fontSize="small"
-          color={dragging ? "silver" : "black"}
-        >
-          {text ?? dragKey}
-        </Paragraph>
+        <SubjectCardView
+          text={text ?? dragKey}
+          color={"black"}
+        />
       </Card>
     );
   }
@@ -1104,8 +1140,9 @@ function Ghost({
       height={heightSlot}
       width={widthSlot}
       padding={majorScale(1)}
-      elevation={4}
+      elevation={3}
       background="white"
+      opacity={0.7}
       pointerEvents="none"
       style={{
         transform: "translate(-9999px, -9999px)", // 初期は画面外
@@ -1113,9 +1150,7 @@ function Ghost({
         zIndex: 9998,
       }}
     >
-      <Paragraph textAlign="center" fontSize="small">
-        {drag.subjectName ?? drag.dragKey}
-      </Paragraph>
+      <SubjectCardView text={drag.subjectName ?? drag.dragKey ?? ""} />
     </Card>
   )
 }
