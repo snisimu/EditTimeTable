@@ -590,7 +590,7 @@ export default function App() {
     >
       {/* Top Pane */}
       <Pane
-        background="blue50"
+        background={colors.primarySoft}
         padding={16}
         elevation={2}
         display="flex"
@@ -799,13 +799,13 @@ const MainArea: React.FC<{
         width={widthSlot}
         padding={majorScale(1)}
         elevation={dragging ? 0 : hasSubject ? 1 : 0}
-        background="white"
+        background={colors.surface}
         opacity={dragging ? 0.5 : 1}
         cursor="grab"
       >
         <SubjectCardView
           text={text ?? dragKey}
-          color={"black"}
+          color={colors.textMain}
         />
       </Card>
     );
@@ -849,7 +849,7 @@ const MainArea: React.FC<{
             width: "100%",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "lightgray")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = colors.surfaceAlt)}
           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
         >
           {funcLabel}
@@ -865,9 +865,9 @@ const MainArea: React.FC<{
           position: "fixed",
           top: menu.y,
           left: menu.x,
-          background: "white",
+          background: colors.surface,
           zIndex: 9999,
-          border: "1px solid lightgray",
+          border: `1px solid ${colors.border}`,
         }}
       >
         <MenuItem
@@ -905,7 +905,7 @@ const MainArea: React.FC<{
 
       <Pane
         ref={sidebarRef}
-        background="tint1"
+        backgroundColor={colors.surfaceAlt}
         display="flex"
         flexDirection="column"
         padding={majorScale(2)}
@@ -1018,7 +1018,7 @@ const MainArea: React.FC<{
                           display="flex"
                           alignItems="center"
                           justifyContent="center"
-                          background="gray100"
+                          backgroundColor={colors.surfaceAlt}
                         >
                           <Heading textAlign="center">{dayLabel}</Heading>
                         </Card>
@@ -1045,7 +1045,7 @@ const MainArea: React.FC<{
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      background="gray100"
+                      backgroundColor={colors.primarySoft}
                     >
                       <Heading>{row.clsGroup}</Heading>
                     </Card>
@@ -1063,7 +1063,7 @@ const MainArea: React.FC<{
                     alignItems="center"
                     justifyContent="center"
                     padding={majorScale(1)}
-                    background="gray50"
+                    backgroundColor={colors.surfaceAlt}
                   >
                     <Heading>{row.cls}</Heading>
                   </Card>
@@ -1141,7 +1141,7 @@ function Ghost({
       width={widthSlot}
       padding={majorScale(1)}
       elevation={3}
-      background="white"
+      background={colors.surface}
       opacity={0.7}
       pointerEvents="none"
       style={{
