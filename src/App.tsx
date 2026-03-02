@@ -658,15 +658,148 @@ export default function App() {
       return;
     }
 
+    const dragKeyFrom = drag.dragKey;
+    if (!dragKeyFrom) return;
+    const fromParsed = fromPosKey(dragKeyFrom);
+
+    // Sidebar drop (move/reorder) should be handled before slot logic.
+    const inSidebar = !!sidebarRef.current && sidebarRef.current.contains(el);
+    if (inSidebar) {
+      if (!fromParsed) return;
+
+      const [fromCls, fromPos] = fromParsed;
+      const fromDayIndex = fromPos[0];
+
+      const sidebar = sidebarRef.current;
+      if (!sidebar) return;
+
+      // Collect sidebar item elements for this class (negative dayIndex only), in DOM order.
+      const sidebarEls = Array.from(sidebar.querySelectorAll("[data-pos-key]"))
+        .map((n) => ({
+          el: n as HTMLElement,
+          key: (n as HTMLElement).getAttribute("data-pos-key"),
+        }))
+        .filter(({ key }) => {
+          if (!key) return false;
+          if (key === dragKeyFrom) return false; // exclude moving item
+          const parsed = fromPosKey(key);
+          if (!parsed) return false;
+          const [cls, pos] = parsed;
+          return (
+            cls[0] === fromCls[0] &&
+            cls[1] === fromCls[1] &&
+            pos[0] < 0
+          );
+        });
+
+      // Decide overall insertion index by Y (between elements).
+      let overallInsertIndex = 0;
+      for (let i = 0; i < sidebarEls.length; i++) {
+        const r = sidebarEls[i].el.getBoundingClientRect();
+        const midY = r.top + r.height / 2;
+        if (y < midY) {
+          overallInsertIndex = i;
+          break;
+        }
+        overallInsertIndex = i + 1;
+      }
+
+      // Choose target dayIndex based on the element below insertion point (or edges).
+      let targetDayIndex = -1;
+      if (sidebarEls.length === 0) {
+        targetDayIndex = -1;
+      } else if (overallInsertIndex <= 0) {
+        const parsed = sidebarEls[0].key ? fromPosKey(sidebarEls[0].key) : null;
+        targetDayIndex = parsed ? parsed[1][0] : -1;
+      } else if (overallInsertIndex >= sidebarEls.length) {
+        const parsed = sidebarEls[sidebarEls.length - 1].key
+          ? fromPosKey(sidebarEls[sidebarEls.length - 1].key!)
+          : null;
+        targetDayIndex = parsed ? parsed[1][0] : -1;
+      } else {
+        const parsed = sidebarEls[overallInsertIndex].key
+          ? fromPosKey(sidebarEls[overallInsertIndex].key!)
+          : null;
+        targetDayIndex = parsed ? parsed[1][0] : -1;
+      }
+      if (targetDayIndex >= 0) targetDayIndex = -1;
+
+      // Group insertion index: how many items of targetDayIndex are before overallInsertIndex
+      let groupInsertIndex = 0;
+      for (let i = 0; i < overallInsertIndex; i++) {
+        const k = sidebarEls[i]?.key;
+        if (!k) continue;
+        const parsed = fromPosKey(k);
+        if (!parsed) continue;
+        if (parsed[1][0] === targetDayIndex) groupInsertIndex++;
+      }
+
+      const normalizeGroup = (
+        map: Map<string, Subject>,
+        cls: Class,
+        dayIndex: number,
+        insert?: { index: number; subj: Subject }
+      ) => {
+        const items: { key: string; posIndex: number; subj: Subject }[] = [];
+        for (const [key, subj] of map.entries()) {
+          const parsed = fromPosKey(key);
+          if (!parsed) continue;
+          const [kCls, pos] = parsed;
+          if (kCls[0] !== cls[0] || kCls[1] !== cls[1]) continue;
+          if (pos[0] !== dayIndex) continue;
+          if (pos[1] !== 0) continue;
+          items.push({ key, posIndex: pos[2], subj });
+        }
+        items.sort((a, b) => a.posIndex - b.posIndex || a.subj.id - b.subj.id);
+
+        // delete old keys
+        for (const it of items) map.delete(it.key);
+
+        const list = items.map((it) => it.subj);
+        if (insert) {
+          const idx = Math.max(0, Math.min(insert.index, list.length));
+          list.splice(idx, 0, insert.subj);
+        }
+
+        // reinsert
+        list.forEach((subj, i) => {
+          const key = toPosKey(cls, [dayIndex, 0, i]);
+          map.set(key, { ...subj, posKey: key });
+        });
+      };
+
+      setSubjects((prev) => {
+        const next = new Map(prev);
+        const moving = next.get(dragKeyFrom);
+        if (!moving) return prev;
+
+        // remove moving from its original location
+        next.delete(dragKeyFrom);
+
+        // If moving from sidebar group, compact its source group (if different)
+        if (fromDayIndex < 0 && fromDayIndex !== targetDayIndex) {
+          normalizeGroup(next, fromCls, fromDayIndex);
+        }
+
+        // Insert into target group and normalize
+        normalizeGroup(next, fromCls, targetDayIndex, {
+          index: groupInsertIndex,
+          subj: moving,
+        });
+
+        return next;
+      });
+
+      return;
+    }
+
     const slotEl = el.closest("[data-pos-key]") as Element | null;
     if (slotEl) {
       const posKeyTo = slotEl.getAttribute("data-pos-key");
-      const dragKeyFrom = drag.dragKey;
       console.log({ dragKeyFrom, posKeyTo });
 
-      if (!posKeyTo || !dragKeyFrom) return;
+      if (!posKeyTo) return;
 
-      const fromParsed = fromPosKey(dragKeyFrom);
       const toParsed = fromPosKey(posKeyTo);
       const fromIsSidebarPool = !!fromParsed && fromParsed[1][0] < 0;
 
