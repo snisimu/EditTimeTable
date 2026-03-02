@@ -675,6 +675,24 @@ export default function App() {
         return;
       }
 
+      // Main area rule: subjects can only be replaced/moved within the same class.
+      // (Allow plain sidebar items without posKey to be placed anywhere.)
+      const toIsTimetable = toParsed[1][0] >= 0;
+      if (toIsTimetable && fromParsed) {
+        const fromCls = fromParsed[0];
+        const toCls = toParsed[0];
+        const sameClass = fromCls[0] === toCls[0] && fromCls[1] === toCls[1];
+        if (!sameClass) {
+          console.log("DROP: different class is not a valid target", {
+            from: dragKeyFrom,
+            to: posKeyTo,
+            fromCls,
+            toCls,
+          });
+          return;
+        }
+      }
+
       // sidebar item -> timetable slot: place a subject
       if (!fromParsed || fromIsSidebarPool) {
         setSubjects((prev) => {
@@ -989,7 +1007,27 @@ const MainArea: React.FC<{
   const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
     const dragging = drag !== null && drag.dragKey === dragKey;
     const hasSubject = (text ?? "").trim().length > 0;
-    const isDropTarget = !!drag && hoverPosKey === dragKey && drag.dragKey !== dragKey;
+    const isDropTarget = (() => {
+      if (!drag) return false;
+      if (hoverPosKey !== dragKey) return false;
+      if (drag.dragKey === dragKey) return false;
+
+      const toParsed = fromPosKey(dragKey);
+      if (!toParsed) return true;
+
+      // Only enforce the same-class rule for timetable slots.
+      if (toParsed[1][0] < 0) return true;
+
+      const fromKey = drag.dragKey;
+      if (!fromKey) return true;
+
+      const fromParsed = fromPosKey(fromKey);
+      if (!fromParsed) return true;
+
+      const sameClass =
+        fromParsed[0][0] === toParsed[0][0] && fromParsed[0][1] === toParsed[0][1];
+      return sameClass;
+    })();
     return (
       <Card
         data-pos-key={dragKey}
