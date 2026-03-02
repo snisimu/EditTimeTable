@@ -226,6 +226,26 @@ export default function App() {
 
   const [activeSidebarClass, setActiveSidebarClass] = useState<Class>(["1", "A"]);
   const activeSidebarClassRef = useRef<Class>(["1", "A"]);
+  const sidebarHoverClassRef = useRef<Class | null>(null);
+  const pendingSidebarClassRef = useRef<Class | null>(null);
+  const sidebarSwitchTimerRef = useRef<number | null>(null);
+
+  const clearSidebarSwitchTimer = () => {
+    if (sidebarSwitchTimerRef.current != null) {
+      window.clearTimeout(sidebarSwitchTimerRef.current);
+      sidebarSwitchTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    activeSidebarClassRef.current = activeSidebarClass;
+  }, [activeSidebarClass]);
+
+  useEffect(() => {
+    return () => {
+      clearSidebarSwitchTimer();
+    };
+  }, []);
 
   const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   // ★ rAF でゴーストDOMを動かすための ref
@@ -315,14 +335,53 @@ export default function App() {
       const slotEl = el?.closest("[data-pos-key]") as Element | null;
       const key = slotEl?.getAttribute("data-pos-key") ?? null;
       const parsed = key ? fromPosKey(key) : null;
+
       if (parsed && parsed[1][0] >= 0) {
         const nextCls = parsed[0];
-        const curCls = activeSidebarClassRef.current;
-        if (curCls[0] !== nextCls[0] || curCls[1] !== nextCls[1]) {
-          activeSidebarClassRef.current = nextCls;
-          setActiveSidebarClass(nextCls);
+        sidebarHoverClassRef.current = nextCls;
+
+        const curActive = activeSidebarClassRef.current;
+        const activeIsSame = curActive[0] === nextCls[0] && curActive[1] === nextCls[1];
+
+        if (activeIsSame) {
+          pendingSidebarClassRef.current = null;
+          clearSidebarSwitchTimer();
+        } else {
+          const pending = pendingSidebarClassRef.current;
+          const pendingIsSame =
+            !!pending && pending[0] === nextCls[0] && pending[1] === nextCls[1];
+
+          if (!pendingIsSame) {
+            pendingSidebarClassRef.current = nextCls;
+            clearSidebarSwitchTimer();
+
+            sidebarSwitchTimerRef.current = window.setTimeout(() => {
+              const stillHover = sidebarHoverClassRef.current;
+              const stillPending = pendingSidebarClassRef.current;
+              if (!stillHover || !stillPending) return;
+
+              const stillSame =
+                stillHover[0] === stillPending[0] && stillHover[1] === stillPending[1];
+              if (!stillSame) return;
+
+              const cur = activeSidebarClassRef.current;
+              const alreadyActive = cur[0] === stillPending[0] && cur[1] === stillPending[1];
+              if (alreadyActive) return;
+
+              activeSidebarClassRef.current = stillPending;
+              setActiveSidebarClass(stillPending);
+            }, 500);
+          }
         }
+      } else {
+        sidebarHoverClassRef.current = null;
+        pendingSidebarClassRef.current = null;
+        clearSidebarSwitchTimer();
       }
+    } else {
+      sidebarHoverClassRef.current = null;
+      pendingSidebarClassRef.current = null;
+      clearSidebarSwitchTimer();
     }
 
     // Drag-only updates
