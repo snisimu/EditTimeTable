@@ -1007,26 +1007,27 @@ const MainArea: React.FC<{
   const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
     const dragging = drag !== null && drag.dragKey === dragKey;
     const hasSubject = (text ?? "").trim().length > 0;
-    const isDropTarget = (() => {
-      if (!drag) return false;
-      if (hoverPosKey !== dragKey) return false;
-      if (drag.dragKey === dragKey) return false;
+    const dropState: "none" | "allowed" | "blocked" = (() => {
+      if (!drag) return "none";
+      if (hoverPosKey !== dragKey) return "none";
+      if (drag.dragKey === dragKey) return "none";
 
       const toParsed = fromPosKey(dragKey);
-      if (!toParsed) return true;
+      if (!toParsed) return "allowed";
 
       // Only enforce the same-class rule for timetable slots.
-      if (toParsed[1][0] < 0) return true;
+      if (toParsed[1][0] < 0) return "allowed";
 
       const fromKey = drag.dragKey;
-      if (!fromKey) return true;
+      if (!fromKey) return "allowed";
 
       const fromParsed = fromPosKey(fromKey);
-      if (!fromParsed) return true;
+      // plain sidebar item (not a posKey) is allowed anywhere
+      if (!fromParsed) return "allowed";
 
       const sameClass =
         fromParsed[0][0] === toParsed[0][0] && fromParsed[0][1] === toParsed[0][1];
-      return sameClass;
+      return sameClass ? "allowed" : "blocked";
     })();
     return (
       <Card
@@ -1042,13 +1043,20 @@ const MainArea: React.FC<{
         opacity={dragging ? 0.5 : 1}
         cursor="grab"
         style={
-          isDropTarget
+          dropState === "allowed"
             ? {
                 outline: `2px solid ${colors.primary}`,
                 outlineOffset: 1,
                 borderRadius: 0,
               }
-            : undefined
+            : dropState === "blocked"
+              ? {
+                  outline: `2px dashed ${colors.danger}`,
+                  outlineOffset: 1,
+                  borderRadius: 0,
+                  backgroundColor: colors.surfaceAlt,
+                }
+              : undefined
         }
       >
         <SubjectCardView
