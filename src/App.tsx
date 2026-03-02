@@ -850,7 +850,7 @@ const MainArea: React.FC<{
             cursor: "pointer",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = colors.surfaceAlt)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
         >
           {funcLabel}
         </button>
