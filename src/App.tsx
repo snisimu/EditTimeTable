@@ -1075,10 +1075,12 @@ const MainArea: React.FC<{
         display="flex"
         flexDirection="column"
         padding={majorScale(2)}
+        flex="none"
         elevation={2}
         overflowY="auto"
         minHeight={0}
-        minWidth={110}
+        width={widthSlot + majorScale(4)}
+        minWidth={widthSlot + majorScale(4)}
         gap={majorScale(4)}
       >
         {sidebarSubjects.map(({ posKey, subj }) => (
