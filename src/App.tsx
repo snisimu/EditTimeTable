@@ -200,11 +200,17 @@ export default function App() {
     , [ toPosKey(["1", "A"], [-2, 0, 0]),
         { id: 6, name: "Art", posKey: toPosKey(["1", "A"], [-2, 0, 0]) },
       ]
+    , [ toPosKey(["1", "A"], [-3, 0, 0]),
+        { id: 7, name: "Music", posKey: toPosKey(["1", "A"], [-3, 0, 0]) },
+      ]
     , [ toPosKey(["2", "B"], [1, 0, 0]),
-        { id: 7, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
+        { id: 8, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
       ]
     , [ toPosKey(["2", "B"], [1, 1, 0]),
-        { id: 8, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+        { id: 9, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+      ]
+    , [ toPosKey(["2", "B"], [-1, 0, 0]),
+        { id: 10, name: "Geography", posKey: toPosKey(["2", "B"], [-1, 0, 0]) },
       ]
     ])
   );
