@@ -212,6 +212,8 @@ export default function App() {
   }, [subjects]);
   
   const [drag, setDrag] = useState<DragState | null>(null);
+  const [hoverPosKey, setHoverPosKey] = useState<string | null>(null);
+  const hoverPosKeyRef = useRef<string | null>(null);
 
   const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   // ★ rAF でゴーストDOMを動かすための ref
@@ -300,6 +302,17 @@ export default function App() {
     pointerRef.current = { x: e.clientX, y: e.clientY };
     updateAutoScrollSpeed(e.clientX, e.clientY);
     scheduleGhostMove();
+
+    const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null;
+    const slotEl = el?.closest("[data-pos-key]") as Element | null;
+    const key = slotEl?.getAttribute("data-pos-key") ?? null;
+    const parsed = key ? fromPosKey(key) : null;
+    const nextHover = parsed ? key : null;
+
+    if (hoverPosKeyRef.current !== nextHover) {
+      hoverPosKeyRef.current = nextHover;
+      setHoverPosKey(nextHover);
+    }
     // console.log("onPointerMove", { eclientY: e.clientY });
   }
 
@@ -307,6 +320,9 @@ export default function App() {
     if (drag?.el) drag.el.style.cursor = "grab";
     setDrag(null);
     dragRef.current = null;
+
+    hoverPosKeyRef.current = null;
+    setHoverPosKey(null);
 
     document.body.style.cursor = "";
     stopAutoScroll();
@@ -636,6 +652,7 @@ export default function App() {
 
       <MainArea
         drag={drag}
+        hoverPosKey={hoverPosKey}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
         onPointerMove={onPointerMove}
@@ -661,6 +678,7 @@ export default function App() {
 
 const MainArea: React.FC<{
   drag: DragState | null;
+  hoverPosKey: string | null;
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
@@ -676,6 +694,7 @@ const MainArea: React.FC<{
 }> = (props) => {
 
   const drag = props.drag;
+  const hoverPosKey = props.hoverPosKey;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
   const onPointerMove = props.onPointerMove;
@@ -829,6 +848,7 @@ const MainArea: React.FC<{
   const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
     const dragging = drag !== null && drag.dragKey === dragKey;
     const hasSubject = (text ?? "").trim().length > 0;
+    const isDropTarget = !!drag && hoverPosKey === dragKey && drag.dragKey !== dragKey;
     return (
       <Card
         data-pos-key={dragKey}
@@ -842,6 +862,15 @@ const MainArea: React.FC<{
         background={colors.surface}
         opacity={dragging ? 0.5 : 1}
         cursor="grab"
+        style={
+          isDropTarget
+            ? {
+                outline: `2px solid ${colors.primary}`,
+                outlineOffset: 1,
+                borderRadius: 0,
+              }
+            : undefined
+        }
       >
         <SubjectCardView
           text={text ?? dragKey}
