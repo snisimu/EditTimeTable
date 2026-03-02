@@ -224,6 +224,9 @@ export default function App() {
   const [hoverPosKey, setHoverPosKey] = useState<string | null>(null);
   const hoverPosKeyRef = useRef<string | null>(null);
 
+  const [activeSidebarClass, setActiveSidebarClass] = useState<Class>(["1", "A"]);
+  const activeSidebarClassRef = useRef<Class>(["1", "A"]);
+
   const pointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   // ★ rAF でゴーストDOMを動かすための ref
   const ghostRef = useRef<HTMLDivElement | null>(null);
@@ -304,6 +307,25 @@ export default function App() {
   }
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null;
+
+    // Track which class row the pointer is on (for Sidebar filtering)
+    const inTableArea = !!el && !!tableAreaRef.current && tableAreaRef.current.contains(el);
+    if (inTableArea) {
+      const slotEl = el?.closest("[data-pos-key]") as Element | null;
+      const key = slotEl?.getAttribute("data-pos-key") ?? null;
+      const parsed = key ? fromPosKey(key) : null;
+      if (parsed && parsed[1][0] >= 0) {
+        const nextCls = parsed[0];
+        const curCls = activeSidebarClassRef.current;
+        if (curCls[0] !== nextCls[0] || curCls[1] !== nextCls[1]) {
+          activeSidebarClassRef.current = nextCls;
+          setActiveSidebarClass(nextCls);
+        }
+      }
+    }
+
+    // Drag-only updates
     const d = dragRef.current;
     if (!d) return;
     if (e.pointerId !== d.pointerId) return;
@@ -312,7 +334,6 @@ export default function App() {
     updateAutoScrollSpeed(e.clientX, e.clientY);
     scheduleGhostMove();
 
-    const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null;
     const slotEl = el?.closest("[data-pos-key]") as Element | null;
     const key = slotEl?.getAttribute("data-pos-key") ?? null;
     const parsed = key ? fromPosKey(key) : null;
@@ -662,6 +683,7 @@ export default function App() {
       <MainArea
         drag={drag}
         hoverPosKey={hoverPosKey}
+        activeSidebarClass={activeSidebarClass}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
         onPointerMove={onPointerMove}
@@ -688,6 +710,7 @@ export default function App() {
 const MainArea: React.FC<{
   drag: DragState | null;
   hoverPosKey: string | null;
+  activeSidebarClass: Class;
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
@@ -704,6 +727,7 @@ const MainArea: React.FC<{
 
   const drag = props.drag;
   const hoverPosKey = props.hoverPosKey;
+  const activeSidebarClass = props.activeSidebarClass;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
   const onPointerMove = props.onPointerMove;
@@ -719,7 +743,12 @@ const MainArea: React.FC<{
 
   const sidebarSubjects = Array.from(subjects.entries())
     .map(([posKey, subj]) => ({ posKey, subj, parsed: fromPosKey(posKey) }))
-    .filter(({ parsed }) => parsed && parsed[1][0] < 0)
+    .filter(({ parsed }) => {
+      if (!parsed) return false;
+      const [cls, pos] = parsed;
+      if (pos[0] >= 0) return false;
+      return cls[0] === activeSidebarClass[0] && cls[1] === activeSidebarClass[1];
+    })
     .sort((a, b) => {
       const ap = a.parsed!;
       const bp = b.parsed!;
