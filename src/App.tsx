@@ -1,4 +1,9 @@
-import { useRef, useState, useEffect, Fragment } from 'react'
+import
+  { useRef
+  , useState
+  , useEffect
+  , Fragment
+  } from 'react'
 import
   { Pane
   , Card
@@ -899,29 +904,10 @@ const MainArea: React.FC<{
         elevation={2}
         overflowY="auto"
         minHeight={0}
+        minWidth={110}
         gap={majorScale(4)}
       >
-        <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading>
-        <Slot dragKey="itemA" text="itemA" />
-        <Slot dragKey="itemB" text="itemB" />
-        <Slot dragKey="itemC" text="itemC" />
-        <Slot dragKey="itemD" text="itemD" />
-        <Slot dragKey="itemE" text="itemE" />
-        <Slot dragKey="itemF" text="itemF" />
-        <Slot dragKey="itemG" text="itemG" />
-        <Slot dragKey="itemH" text="itemH" />
-        <Slot dragKey="itemI" text="itemI" />
-        <Slot dragKey="itemJ" text="itemJ" />
-        <Slot dragKey="itemK" text="itemK" />
-        <Slot dragKey="itemL" text="itemL" />
-        <Slot dragKey="itemM" text="itemM" />
-        <Slot dragKey="itemN" text="itemN" />
-        <Slot dragKey="itemO" text="itemO" />
-        <Slot dragKey="itemP" text="itemP" />
-        <Slot dragKey="itemQ" text="itemQ" />
-        <Slot dragKey="itemR" text="itemR" />
-        <Slot dragKey="itemS" text="itemS" />
-        <Slot dragKey="itemT" text="itemT" />
+        {/* <Heading size={500} marginBottom={majorScale(2)}>Sidebar</Heading> */}
       </Pane>
 
       {/* table area */}
