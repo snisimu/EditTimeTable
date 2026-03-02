@@ -224,6 +224,9 @@ export default function App() {
   const [hoverPosKey, setHoverPosKey] = useState<string | null>(null);
   const hoverPosKeyRef = useRef<string | null>(null);
 
+  const [sidebarInsertMark, setSidebarInsertMark] = useState<{ top: number; height: number } | null>(null);
+  const sidebarInsertMarkRef = useRef<{ top: number; height: number } | null>(null);
+
   const [activeSidebarClass, setActiveSidebarClass] = useState<Class>(["1", "A"]);
   const activeSidebarClassRef = useRef<Class>(["1", "A"]);
   const sidebarHoverClassRef = useRef<Class | null>(null);
@@ -427,6 +430,122 @@ export default function App() {
       hoverPosKeyRef.current = nextHover;
       setHoverPosKey(nextHover);
     }
+
+    // Sidebar insert indicator (any drag -> sidebar insert)
+    // Highlight the gap between subjects indicating the insertion point.
+    const fromKey = d.dragKey;
+    const fromParsed = fromKey ? fromPosKey(fromKey) : null;
+    const isFromPosKey = !!fromParsed;
+    const inSidebar = !!el && !!sidebarRef.current && sidebarRef.current.contains(el);
+
+    if (isFromPosKey && inSidebar && sidebarRef.current) {
+      const sidebar = sidebarRef.current;
+      const nodes = Array.from(sidebar.querySelectorAll("[data-pos-key]")) as HTMLElement[];
+      const els = nodes.filter((n) => n.getAttribute("data-pos-key") !== fromKey);
+
+      const minMarkHeight = majorScale(4); // empty-case fallback
+
+      let insertIndex = 0;
+      for (let i = 0; i < els.length; i++) {
+        const r = els[i].getBoundingClientRect();
+        const midY = r.top + r.height / 2;
+        if (e.clientY < midY) {
+          insertIndex = i;
+          break;
+        }
+        insertIndex = i + 1;
+      }
+
+      // Determine whether dropping here would actually change state.
+      // If it would be a no-op (same group, same index), do not show the insert mark.
+      const wouldChange = (() => {
+        if (!fromParsed) return true;
+
+        const [, fromPos] = fromParsed;
+        const fromDayIndex = fromPos[0];
+        const fromPosIndex = fromPos[2];
+
+        // From timetable -> sidebar always changes (it creates/moves into sidebar).
+        if (fromDayIndex >= 0) return true;
+
+        // Mirror handleDrop's targetDayIndex selection (based on element below insertion).
+        let targetDayIndex = -1;
+        if (els.length === 0) {
+          targetDayIndex = -1;
+        } else if (insertIndex <= 0) {
+          const k = els[0].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        } else if (insertIndex >= els.length) {
+          const k = els[els.length - 1].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        } else {
+          const k = els[insertIndex].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        }
+        if (targetDayIndex >= 0) targetDayIndex = -1;
+
+        // Group insertion index: count how many items of targetDayIndex are before insertIndex.
+        let groupInsertIndex = 0;
+        for (let i = 0; i < insertIndex; i++) {
+          const k = els[i]?.getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          if (!p) continue;
+          if (p[1][0] === targetDayIndex) groupInsertIndex++;
+        }
+
+        // No-op if inserting into the same group at the same index.
+        if (targetDayIndex === fromDayIndex && groupInsertIndex === fromPosIndex) return false;
+        return true;
+      })();
+
+      let markTop = 0;
+      let markHeight = 0;
+      if (els.length === 0) {
+        const padTop = Number.parseFloat(window.getComputedStyle(sidebar).paddingTop) || 0;
+        const padBottom = Number.parseFloat(window.getComputedStyle(sidebar).paddingBottom) || 0;
+        markTop = 0;
+        markHeight = Math.max(minMarkHeight, padTop + padBottom);
+      } else if (insertIndex <= 0) {
+        const first = els[0];
+        markTop = 0;
+        markHeight = Math.max(0, first.offsetTop);
+      } else if (insertIndex >= els.length) {
+        const last = els[els.length - 1];
+        const padBottom = Number.parseFloat(window.getComputedStyle(sidebar).paddingBottom) || 0;
+        markTop = last.offsetTop + last.offsetHeight;
+        markHeight = Math.max(0, padBottom);
+      } else {
+        const prev = els[insertIndex - 1];
+        const next = els[insertIndex];
+        const gapTop = prev.offsetTop + prev.offsetHeight;
+        const gapBottom = next.offsetTop;
+        markTop = gapTop;
+        markHeight = Math.max(0, gapBottom - gapTop);
+      }
+
+      if (!wouldChange) {
+        if (sidebarInsertMarkRef.current !== null) {
+          sidebarInsertMarkRef.current = null;
+          setSidebarInsertMark(null);
+        }
+      } else {
+        const nextMark = { top: markTop, height: markHeight };
+        const cur = sidebarInsertMarkRef.current;
+        const changed = !cur || cur.top !== nextMark.top || cur.height !== nextMark.height;
+        if (changed) {
+          sidebarInsertMarkRef.current = nextMark;
+          setSidebarInsertMark(nextMark);
+        }
+      }
+    } else {
+      if (sidebarInsertMarkRef.current !== null) {
+        sidebarInsertMarkRef.current = null;
+        setSidebarInsertMark(null);
+      }
+    }
     // console.log("onPointerMove", { eclientY: e.clientY });
   }
 
@@ -442,6 +561,9 @@ export default function App() {
 
     hoverPosKeyRef.current = null;
     setHoverPosKey(null);
+
+    sidebarInsertMarkRef.current = null;
+    setSidebarInsertMark(null);
 
     document.body.style.cursor = "";
     stopAutoScroll();
@@ -924,6 +1046,7 @@ export default function App() {
         drag={drag}
         hoverPosKey={hoverPosKey}
         activeSidebarClass={activeSidebarClass}
+        sidebarInsertMark={sidebarInsertMark}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
         onPointerMove={onPointerMove}
@@ -951,6 +1074,7 @@ const MainArea: React.FC<{
   drag: DragState | null;
   hoverPosKey: string | null;
   activeSidebarClass: Class;
+  sidebarInsertMark: { top: number; height: number } | null;
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
@@ -968,6 +1092,7 @@ const MainArea: React.FC<{
   const drag = props.drag;
   const hoverPosKey = props.hoverPosKey;
   const activeSidebarClass = props.activeSidebarClass;
+  const sidebarInsertMark = props.sidebarInsertMark;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
   const onPointerMove = props.onPointerMove;
@@ -1283,6 +1408,7 @@ const MainArea: React.FC<{
         backgroundColor={colors.surfaceAlt}
         display="flex"
         flexDirection="column"
+        position="relative"
         padding={majorScale(2)}
         flex="none"
         elevation={2}
@@ -1292,6 +1418,17 @@ const MainArea: React.FC<{
         minWidth={widthSlot + majorScale(4)}
         gap={majorScale(4)}
       >
+        {sidebarInsertMark != null && sidebarInsertMark.height > 0 && (
+          <Pane
+            position="absolute"
+            left={majorScale(2)}
+            width={widthSlot}
+            top={sidebarInsertMark.top}
+            height={sidebarInsertMark.height}
+            pointerEvents="none"
+            backgroundColor={colors.primarySoft}
+          />
+        )}
         {sidebarSubjects.map(({ posKey, subj }) => (
           <Slot key={posKey} dragKey={posKey} text={subj.name} />
         ))}
