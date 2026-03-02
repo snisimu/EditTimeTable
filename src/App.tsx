@@ -229,6 +229,10 @@ export default function App() {
   const sidebarHoverClassRef = useRef<Class | null>(null);
   const pendingSidebarClassRef = useRef<Class | null>(null);
   const sidebarSwitchTimerRef = useRef<number | null>(null);
+  const sidebarClassLockRef = useRef<{ locked: boolean; cls: Class | null }>({
+    locked: false,
+    cls: null,
+  });
 
   const clearSidebarSwitchTimer = () => {
     if (sidebarSwitchTimerRef.current != null) {
@@ -307,6 +311,23 @@ export default function App() {
     const parsed = fromPosKey(dragKey);
     const subjectName = parsed ? (subjects.get(dragKey)?.name ?? dragKey) : dragKey;
 
+    // Lock Sidebar content to the dragged class during drag
+    if (parsed) {
+      const dragCls = parsed[0];
+      sidebarClassLockRef.current = { locked: true, cls: dragCls };
+
+      pendingSidebarClassRef.current = null;
+      sidebarHoverClassRef.current = null;
+      clearSidebarSwitchTimer();
+
+      const cur = activeSidebarClassRef.current;
+      const already = cur[0] === dragCls[0] && cur[1] === dragCls[1];
+      if (!already) {
+        activeSidebarClassRef.current = dragCls;
+        setActiveSidebarClass(dragCls);
+      }
+    }
+
     const nextDrag: DragState = {
       pointerId: e.pointerId,
       toRectX: e.clientX - r.left,
@@ -329,59 +350,63 @@ export default function App() {
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = document.elementFromPoint(e.clientX, e.clientY) as Element | null;
 
+    const draggingNow = dragRef.current != null;
+
     // Track which class row the pointer is on (for Sidebar filtering)
-    const inTableArea = !!el && !!tableAreaRef.current && tableAreaRef.current.contains(el);
-    if (inTableArea) {
-      const slotEl = el?.closest("[data-pos-key]") as Element | null;
-      const key = slotEl?.getAttribute("data-pos-key") ?? null;
-      const parsed = key ? fromPosKey(key) : null;
+    if (!draggingNow && !sidebarClassLockRef.current.locked) {
+      const inTableArea = !!el && !!tableAreaRef.current && tableAreaRef.current.contains(el);
+      if (inTableArea) {
+        const slotEl = el?.closest("[data-pos-key]") as Element | null;
+        const key = slotEl?.getAttribute("data-pos-key") ?? null;
+        const parsed = key ? fromPosKey(key) : null;
 
-      if (parsed && parsed[1][0] >= 0) {
-        const nextCls = parsed[0];
-        sidebarHoverClassRef.current = nextCls;
+        if (parsed && parsed[1][0] >= 0) {
+          const nextCls = parsed[0];
+          sidebarHoverClassRef.current = nextCls;
 
-        const curActive = activeSidebarClassRef.current;
-        const activeIsSame = curActive[0] === nextCls[0] && curActive[1] === nextCls[1];
+          const curActive = activeSidebarClassRef.current;
+          const activeIsSame = curActive[0] === nextCls[0] && curActive[1] === nextCls[1];
 
-        if (activeIsSame) {
+          if (activeIsSame) {
+            pendingSidebarClassRef.current = null;
+            clearSidebarSwitchTimer();
+          } else {
+            const pending = pendingSidebarClassRef.current;
+            const pendingIsSame =
+              !!pending && pending[0] === nextCls[0] && pending[1] === nextCls[1];
+
+            if (!pendingIsSame) {
+              pendingSidebarClassRef.current = nextCls;
+              clearSidebarSwitchTimer();
+
+              sidebarSwitchTimerRef.current = window.setTimeout(() => {
+                const stillHover = sidebarHoverClassRef.current;
+                const stillPending = pendingSidebarClassRef.current;
+                if (!stillHover || !stillPending) return;
+
+                const stillSame =
+                  stillHover[0] === stillPending[0] && stillHover[1] === stillPending[1];
+                if (!stillSame) return;
+
+                const cur = activeSidebarClassRef.current;
+                const alreadyActive = cur[0] === stillPending[0] && cur[1] === stillPending[1];
+                if (alreadyActive) return;
+
+                activeSidebarClassRef.current = stillPending;
+                setActiveSidebarClass(stillPending);
+              }, 500);
+            }
+          }
+        } else {
+          sidebarHoverClassRef.current = null;
           pendingSidebarClassRef.current = null;
           clearSidebarSwitchTimer();
-        } else {
-          const pending = pendingSidebarClassRef.current;
-          const pendingIsSame =
-            !!pending && pending[0] === nextCls[0] && pending[1] === nextCls[1];
-
-          if (!pendingIsSame) {
-            pendingSidebarClassRef.current = nextCls;
-            clearSidebarSwitchTimer();
-
-            sidebarSwitchTimerRef.current = window.setTimeout(() => {
-              const stillHover = sidebarHoverClassRef.current;
-              const stillPending = pendingSidebarClassRef.current;
-              if (!stillHover || !stillPending) return;
-
-              const stillSame =
-                stillHover[0] === stillPending[0] && stillHover[1] === stillPending[1];
-              if (!stillSame) return;
-
-              const cur = activeSidebarClassRef.current;
-              const alreadyActive = cur[0] === stillPending[0] && cur[1] === stillPending[1];
-              if (alreadyActive) return;
-
-              activeSidebarClassRef.current = stillPending;
-              setActiveSidebarClass(stillPending);
-            }, 500);
-          }
         }
       } else {
         sidebarHoverClassRef.current = null;
         pendingSidebarClassRef.current = null;
         clearSidebarSwitchTimer();
       }
-    } else {
-      sidebarHoverClassRef.current = null;
-      pendingSidebarClassRef.current = null;
-      clearSidebarSwitchTimer();
     }
 
     // Drag-only updates
@@ -409,6 +434,11 @@ export default function App() {
     if (drag?.el) drag.el.style.cursor = "grab";
     setDrag(null);
     dragRef.current = null;
+
+    sidebarClassLockRef.current = { locked: false, cls: null };
+    sidebarHoverClassRef.current = null;
+    pendingSidebarClassRef.current = null;
+    clearSidebarSwitchTimer();
 
     hoverPosKeyRef.current = null;
     setHoverPosKey(null);
