@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, Fragment } from 'react'
 import
   { Pane
   , Card
+  , Menu
   , Heading
   , Paragraph
   , majorScale
@@ -836,57 +837,43 @@ const MainArea: React.FC<{
     }, [menu.open, menu.x, menu.y]);
 
     if (!menu.open) return null;
-
-    const MenuItem: React.FC<{
-      funcLabel: string;
-      onClick: () => void
-    }> = ({ funcLabel, onClick }) => {
-      return (
-        <button
-          onClick={onClick}
-          style={{
-            display: "block",
-            width: "100%",
-            cursor: "pointer",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = colors.surfaceAlt)}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "")}
-        >
-          {funcLabel}
-        </button>
-      );
-    };
     return (
-      <div
+      <Pane
         ref={(node) => {
           menuRef.current = node;
         }}
-        style={{
-          position: "fixed",
-          top: menu.y,
-          left: menu.x,
-          background: colors.surface,
-          zIndex: 9999,
-          border: `1px solid ${colors.border}`,
-        }}
+        position="fixed"
+        top={menu.y}
+        left={menu.x}
+        zIndex={9999}
+        backgroundColor={colors.surface}
+        style={{ border: `1px solid ${colors.border}` }}
       >
-        <MenuItem
-          funcLabel="A"
-          onClick={() => {
-            console.log("A");
-            closeMenu();
-          }}
-        />
-        <MenuItem
-          funcLabel="B"
-          onClick={() => {
-            console.log("B");
-            closeMenu();
-          }}
-        />
-        <hr />
-        <MenuItem funcLabel="close" onClick={closeMenu} />
-      </div>
+        <Menu>
+          <Menu.Group>
+            <Menu.Item
+              onSelect={() => {
+                console.log("A");
+                closeMenu();
+              }}
+            >
+              A
+            </Menu.Item>
+            <Menu.Item
+              onSelect={() => {
+                console.log("B");
+                closeMenu();
+              }}
+            >
+              B
+            </Menu.Item>
+          </Menu.Group>
+
+          <Menu.Divider />
+
+          <Menu.Item onSelect={closeMenu}>close</Menu.Item>
+        </Menu>
+      </Pane>
     );
   };
 
