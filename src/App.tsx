@@ -714,7 +714,21 @@ const MainArea: React.FC<{
   const sidebarSubjects = Array.from(subjects.entries())
     .map(([posKey, subj]) => ({ posKey, subj, parsed: fromPosKey(posKey) }))
     .filter(({ parsed }) => parsed && parsed[1][0] < 0)
-    .sort((a, b) => a.subj.name.localeCompare(b.subj.name) || a.subj.id - b.subj.id);
+    .sort((a, b) => {
+      const ap = a.parsed!;
+      const bp = b.parsed!;
+      const aPos = ap[1];
+      const bPos = bp[1];
+
+      // Sidebar ordering: [-1,*,*] first, then [-2,*,*], ... (dayIndex descending)
+      if (aPos[0] !== bPos[0]) return bPos[0] - aPos[0];
+
+      // Within the same dayIndex, keep deterministic ordering
+      if (aPos[1] !== bPos[1]) return aPos[1] - bPos[1];
+      if (aPos[2] !== bPos[2]) return aPos[2] - bPos[2];
+
+      return a.subj.name.localeCompare(b.subj.name) || a.subj.id - b.subj.id;
+    });
 
   type GridSlotCol = {
     kind: "slot";
