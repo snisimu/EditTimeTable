@@ -460,19 +460,71 @@ export default function App() {
       // If it would be a no-op (same visual position), do not show the insert mark.
       const wouldChange = (() => {
         if (!fromParsed) return true;
+        if (!fromKey) return true;
 
-        const [, fromPos] = fromParsed;
+        const [fromCls, fromPos] = fromParsed;
         const fromDayIndex = fromPos[0];
 
         // From timetable -> sidebar always changes (it creates/moves into sidebar).
         if (fromDayIndex >= 0) return true;
 
-        // No-op if the visual insertion position matches the original.
-        // nodes includes all sidebar items; els excludes the dragged item.
-        // The dragged item's original index in nodes equals the no-op insertIndex in els.
-        const fromOriginalIndex = nodes.findIndex((n) => n.getAttribute("data-pos-key") === fromKey);
-        if (fromOriginalIndex === insertIndex) return false;
-        return true;
+        // Mirror handleDrop: decide target dayIndex based on the element below the insertion point.
+        let targetDayIndex = -1;
+        if (els.length === 0) {
+          targetDayIndex = -1;
+        } else if (insertIndex <= 0) {
+          const k = els[0].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        } else if (insertIndex >= els.length) {
+          const k = els[els.length - 1].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        } else {
+          const k = els[insertIndex].getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          targetDayIndex = p ? p[1][0] : -1;
+        }
+        if (targetDayIndex >= 0) targetDayIndex = -1;
+
+        // Group insertion index within the target dayIndex.
+        let groupInsertIndex = 0;
+        for (let i = 0; i < insertIndex; i++) {
+          const k = els[i]?.getAttribute("data-pos-key");
+          const p = k ? fromPosKey(k) : null;
+          if (!p) continue;
+          if (p[1][0] === targetDayIndex) groupInsertIndex++;
+        }
+
+        // If switching groups, it's always a visible change.
+        if (targetDayIndex !== fromDayIndex) return true;
+
+        // Compare current vs predicted order in the group.
+        const moving = subjects.get(fromKey);
+        if (!moving) return true;
+
+        const curItems: { key: string; posIndex: number; id: number }[] = [];
+        for (const [k, subj] of subjects.entries()) {
+          const p = fromPosKey(k);
+          if (!p) continue;
+          const [cls, pos] = p;
+          if (cls[0] !== fromCls[0] || cls[1] !== fromCls[1]) continue;
+          if (pos[0] !== fromDayIndex) continue;
+          if (pos[1] !== 0) continue;
+          curItems.push({ key: k, posIndex: pos[2], id: subj.id });
+        }
+        curItems.sort((a, b) => a.posIndex - b.posIndex || a.id - b.id);
+
+        const currentOrder = curItems.map((it) => it.id);
+        const withoutMoving = curItems.filter((it) => it.key !== fromKey).map((it) => it.id);
+        const idx = Math.max(0, Math.min(groupInsertIndex, withoutMoving.length));
+        withoutMoving.splice(idx, 0, moving.id);
+
+        if (withoutMoving.length !== currentOrder.length) return true;
+        for (let i = 0; i < currentOrder.length; i++) {
+          if (currentOrder[i] !== withoutMoving[i]) return true;
+        }
+        return false;
       })();
 
       let markTop = 0;
@@ -1383,19 +1435,19 @@ const MainArea: React.FC<{
         display="flex"
         flexDirection="column"
         position="relative"
-        padding={majorScale(2)}
+        padding={majorScale(4)}
         flex="none"
         elevation={2}
         overflowY="auto"
         minHeight={0}
-        width={widthSlot + majorScale(4)}
-        minWidth={widthSlot + majorScale(4)}
+        width={widthSlot + majorScale(8)}
+        minWidth={widthSlot + majorScale(8)}
         gap={majorScale(4)}
       >
         {sidebarInsertMark != null && sidebarInsertMark.height > 0 && (
           <Pane
             position="absolute"
-            left={majorScale(2)}
+            left={majorScale(4)}
             width={widthSlot}
             top={sidebarInsertMark.top}
             height={sidebarInsertMark.height}
