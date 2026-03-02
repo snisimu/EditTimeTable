@@ -456,75 +456,24 @@ export default function App() {
         insertIndex = i + 1;
       }
 
-      // Determine whether dropping here would actually change state.
-      // If it would be a no-op (same visual position), do not show the insert mark.
+      // Determine whether dropping here would actually change the visual order.
+      // The dragged element's original position in `nodes` (= its visual index before drag)
+      // equals the insertion index that would preserve the visual order.
       const wouldChange = (() => {
         if (!fromParsed) return true;
         if (!fromKey) return true;
+        if (fromParsed[1][0] >= 0) return true; // from timetable -> always changes
 
-        const [fromCls, fromPos] = fromParsed;
-        const fromDayIndex = fromPos[0];
-
-        // From timetable -> sidebar always changes (it creates/moves into sidebar).
-        if (fromDayIndex >= 0) return true;
-
-        // Mirror handleDrop: decide target dayIndex based on the element below the insertion point.
-        let targetDayIndex = -1;
-        if (els.length === 0) {
-          targetDayIndex = -1;
-        } else if (insertIndex <= 0) {
-          const k = els[0].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
-        } else if (insertIndex >= els.length) {
-          const k = els[els.length - 1].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
-        } else {
-          const k = els[insertIndex].getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          targetDayIndex = p ? p[1][0] : -1;
+        let originalInsertIndex = -1;
+        for (let i = 0; i < nodes.length; i++) {
+          if (nodes[i].getAttribute("data-pos-key") === fromKey) {
+            originalInsertIndex = i;
+            break;
+          }
         }
-        if (targetDayIndex >= 0) targetDayIndex = -1;
+        if (originalInsertIndex < 0) return true;
 
-        // Group insertion index within the target dayIndex.
-        let groupInsertIndex = 0;
-        for (let i = 0; i < insertIndex; i++) {
-          const k = els[i]?.getAttribute("data-pos-key");
-          const p = k ? fromPosKey(k) : null;
-          if (!p) continue;
-          if (p[1][0] === targetDayIndex) groupInsertIndex++;
-        }
-
-        // If switching groups, it's always a visible change.
-        if (targetDayIndex !== fromDayIndex) return true;
-
-        // Compare current vs predicted order in the group.
-        const moving = subjects.get(fromKey);
-        if (!moving) return true;
-
-        const curItems: { key: string; posIndex: number; id: number }[] = [];
-        for (const [k, subj] of subjects.entries()) {
-          const p = fromPosKey(k);
-          if (!p) continue;
-          const [cls, pos] = p;
-          if (cls[0] !== fromCls[0] || cls[1] !== fromCls[1]) continue;
-          if (pos[0] !== fromDayIndex) continue;
-          if (pos[1] !== 0) continue;
-          curItems.push({ key: k, posIndex: pos[2], id: subj.id });
-        }
-        curItems.sort((a, b) => a.posIndex - b.posIndex || a.id - b.id);
-
-        const currentOrder = curItems.map((it) => it.id);
-        const withoutMoving = curItems.filter((it) => it.key !== fromKey).map((it) => it.id);
-        const idx = Math.max(0, Math.min(groupInsertIndex, withoutMoving.length));
-        withoutMoving.splice(idx, 0, moving.id);
-
-        if (withoutMoving.length !== currentOrder.length) return true;
-        for (let i = 0; i < currentOrder.length; i++) {
-          if (currentOrder[i] !== withoutMoving[i]) return true;
-        }
-        return false;
+        return insertIndex !== originalInsertIndex;
       })();
 
       let markTop = 0;
