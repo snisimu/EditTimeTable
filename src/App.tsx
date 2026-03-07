@@ -262,7 +262,7 @@ const Slot: React.FC<{
       elevation={dragging ? 0 : pinned ? 0 : hasSubject ? 1 : 0}
       background={pinned ? colors.primarySoft : colors.surface}
       opacity={dragging ? 0.5 : 1}
-      cursor={pinned ? "default" : "grab"}
+      cursor={pinned || !hasSubject ? "default" : "grab"}
       style={
         dropState === "allowed"
           ? {
@@ -414,6 +414,7 @@ export default function App() {
     if (!el) return;
 
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (!subjects.get(dragKey)) return;
     if (subjects.get(dragKey)?.pinned) return;
 
     // console.log("onPointerDown", { label, clientX: e.clientX, clientY: e.clientY });
