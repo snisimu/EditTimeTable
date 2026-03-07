@@ -1489,7 +1489,7 @@ const MainArea: React.FC<{
 
       <Pane
         ref={sidebarRef}
-        backgroundColor={colors.surfaceAlt}
+        backgroundColor={colors.surface}
         display="flex"
         flexDirection="column"
         position="relative"
@@ -1513,7 +1513,7 @@ const MainArea: React.FC<{
             top={sidebarInsertMark.top}
             height={sidebarInsertMark.height}
             pointerEvents="none"
-            backgroundColor={colors.primarySoft}
+            backgroundColor={colors.surfaceAlt}
           />
         )}
         {sidebarSubjects.map(({ posKey, subj }) => (
