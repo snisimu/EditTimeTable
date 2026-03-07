@@ -803,6 +803,7 @@ export default function App() {
     e: React.MouseEvent<HTMLDivElement>
   ) => {
     if (drag) return;
+    if (!subjects.get(dragKey)) return;
     e.preventDefault();
     setMenu({
       open: true,
@@ -1113,6 +1114,16 @@ export default function App() {
     }
   };
 
+  const onTogglePinned = (posKey: string) => {
+    setSubjects((prev) => {
+      const next = new Map(prev);
+      const subj = next.get(posKey);
+      if (!subj) return prev;
+      next.set(posKey, { ...subj, pinned: !subj.pinned });
+      return next;
+    });
+  };
+
   const onClickClassHeader = (cls: Class) => {
     const pinned = pinnedSidebarClassRef.current;
     const isSame = pinned && pinned[0] === cls[0] && pinned[1] === cls[1];
@@ -1155,6 +1166,7 @@ export default function App() {
         sidebarInsertMark={sidebarInsertMark}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
+        onTogglePinned={onTogglePinned}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
@@ -1195,6 +1207,7 @@ const MainArea: React.FC<{
   menu: MenuState;
   setMenu: React.Dispatch<React.SetStateAction<MenuState>>;
   closeMenu: () => void;
+  onTogglePinned: (posKey: string) => void;
   subjects: Map<string, Subject>;
 }> = (props) => {
 
@@ -1205,6 +1218,7 @@ const MainArea: React.FC<{
   const sidebarInsertMark = props.sidebarInsertMark;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
+  const onTogglePinned = props.onTogglePinned;
   const onPointerMove = props.onPointerMove;
   const onPointerUp = props.onPointerUp;
   const onPointerCancel = props.onPointerCancel;
@@ -1412,14 +1426,24 @@ const MainArea: React.FC<{
       >
         <Menu>
           <Menu.Group>
-            <Menu.Item
-              onSelect={() => {
-                console.log("A");
-                closeMenu();
-              }}
-            >
-              A
-            </Menu.Item>
+            {(() => {
+              const parsed = menu.dragKey ? fromPosKey(menu.dragKey) : null;
+              const isSidebar = parsed ? parsed[1][0] < 0 : false;
+              const isPinned = menu.dragKey ? !!subjects.get(menu.dragKey)?.pinned : false;
+              return (
+                <Menu.Item
+                  disabled={isSidebar}
+                  onSelect={() => {
+                    if (menu.dragKey) onTogglePinned(menu.dragKey);
+                    closeMenu();
+                  }}
+                >
+                  <span style={isSidebar ? { color: "#94A3B8" } : undefined}>
+                    {isPinned ? "固定を解除" : "固定する"}
+                  </span>
+                </Menu.Item>
+              );
+            })()}
             <Menu.Item
               onSelect={() => {
                 console.log("B");
