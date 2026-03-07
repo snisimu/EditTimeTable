@@ -292,40 +292,52 @@ const Slot: React.FC<{
 
 export default function App() {
 
-  const [subjects, setSubjects] = useState<Map<string, Subject>>(
-    new Map(
-    [ [ toPosKey(["1", "A"], [0, 0, 0]),
-        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]), pinned: true }
-      ]
-    , [ toPosKey(["1", "A"], [0, 0, 1]),
-        { id: 2, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 1]) }
-      ]
-    , [ toPosKey(["1", "A"], [1, 0, 0]),
-        { id: 3, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 0]) }
-      ]
-    , [ toPosKey(["1", "A"], [1, 0, 1]),
-        { id: 4, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 1]) }
-      ]
-    , [ toPosKey(["1", "A"], [-1, 0, 0]),
-        { id: 5, name: "History", posKey: toPosKey(["1", "A"], [-1, 0, 0]) }
-      ]
-    , [ toPosKey(["1", "A"], [-2, 0, 0]),
-        { id: 6, name: "Art", posKey: toPosKey(["1", "A"], [-2, 0, 0]) }
-      ]
-    , [ toPosKey(["1", "A"], [-3, 0, 0]),
-        { id: 7, name: "Music", posKey: toPosKey(["1", "A"], [-3, 0, 0]) }
-      ]
-    , [ toPosKey(["2", "B"], [1, 0, 0]),
-        { id: 8, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) }
-      ]
-    , [ toPosKey(["2", "B"], [1, 1, 0]),
-        { id: 9, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) }
-      ]
-    , [ toPosKey(["2", "B"], [-1, 0, 0]),
-        { id: 10, name: "Geography", posKey: toPosKey(["2", "B"], [-1, 0, 0]) }
-      ]
-    ])
-  );
+  const [subjects, setSubjects] = useState<Map<string, Subject>>(() => {
+    const names = ["Math", "Science", "Literature", "History", "Art", "Music", "PE", "English", "Geography", "Chemistry"];
+    const allTableSlots: SlotPosition[] = [
+      [0, 0, 0], [0, 0, 1], [0, 1, 0],
+      [1, 0, 0], [1, 0, 1], [1, 1, 0],
+      [2, 0, 0], [2, 0, 1], [2, 1, 0],
+      [3, 0, 0], [3, 0, 1], [3, 1, 0],
+      [4, 0, 0], [4, 0, 1], [4, 1, 0],
+    ];
+    const sidebarSlots: SlotPosition[] = [
+      [-1, 0, 0], [-2, 0, 0], [-3, 0, 0],
+    ];
+    const seededShuffle = <T,>(arr: T[], seed: number): T[] => {
+      const result = [...arr];
+      let s = seed;
+      for (let i = result.length - 1; i > 0; i--) {
+        s = (s * 1664525 + 1013904223) & 0x7fffffff;
+        const j = s % (i + 1);
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    };
+    const map = new Map<string, Subject>();
+    let id = 1;
+    let clsIndex = 0;
+    for (const group of classAlls) {
+      for (const [grade, clsNames] of group) {
+        for (const cls of clsNames) {
+          const c: Class = [grade, cls];
+          const seed = clsIndex * 31 + 7;
+          const shuffledNames = seededShuffle(names, seed);
+          const tableSlots = seededShuffle(allTableSlots, seed + 1).slice(0, 7);
+          sidebarSlots.forEach((pos, i) => {
+            const key = toPosKey(c, pos);
+            map.set(key, { id: id++, name: shuffledNames[i], posKey: key });
+          });
+          tableSlots.forEach((pos, i) => {
+            const key = toPosKey(c, pos);
+            map.set(key, { id: id++, name: shuffledNames[i + 3], posKey: key });
+          });
+          clsIndex++;
+        }
+      }
+    }
+    return map;
+  });
 
   // subjects の更新後（state反映後）にログする
   useEffect(() => {
