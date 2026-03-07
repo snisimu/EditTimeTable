@@ -1481,19 +1481,22 @@ const MainArea: React.FC<{
         display="flex"
         flexDirection="column"
         position="relative"
-        padding={majorScale(4)}
+        paddingTop={majorScale(4)}
+        paddingBottom={majorScale(4)}
+        paddingLeft={majorScale(2)}
+        paddingRight={majorScale(2)}
         flex="none"
         elevation={2}
         overflowY="auto"
         minHeight={0}
-        width={widthSlot + majorScale(8)}
-        minWidth={widthSlot + majorScale(8)}
+        width={widthSlot + majorScale(4)}
+        minWidth={widthSlot + majorScale(4)}
         gap={majorScale(4)}
       >
         {sidebarInsertMark != null && sidebarInsertMark.height > 0 && (
           <Pane
             position="absolute"
-            left={majorScale(4)}
+            left={majorScale(2)}
             width={widthSlot}
             top={sidebarInsertMark.top}
             height={sidebarInsertMark.height}
