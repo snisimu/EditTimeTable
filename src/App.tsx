@@ -184,16 +184,22 @@ type TimetableDropCheck =
       ok: false;
       reason:
         | "invalid-target"
+        | "pinned-target"
         | "different-class"
         | "etc";
     };
 
 const checkSubjectDrop = (
   dragKeyFrom?: string,
-  posKeyTo?: string | null
+  posKeyTo?: string | null,
+  targetPinned?: boolean
 ): TimetableDropCheck => {
   if (!posKeyTo) {
     return { ok: false, reason: "invalid-target" };
+  }
+
+  if (targetPinned) {
+    return { ok: false, reason: "pinned-target" };
   }
 
   const toParsed = fromPosKey(posKeyTo);
@@ -239,9 +245,8 @@ const Slot: React.FC<{
     if (!drag) return "none";
     if (hoverPosKey !== dragKey) return "none";
     if (drag.dragKey === dragKey) return "none";
-    if (pinned) return "blocked";
 
-    const result = checkSubjectDrop(drag.dragKey, dragKey);
+    const result = checkSubjectDrop(drag.dragKey, dragKey, pinned);
     return result.ok ? "allowed" : "blocked";
   })();
 
@@ -1004,12 +1009,11 @@ export default function App() {
       console.log({ dragKeyFrom, posKeyTo });
 
       if (!posKeyTo) return;
-      if (subjects.get(posKeyTo)?.pinned) return;
 
       const toParsed = fromPosKey(posKeyTo);
       const fromIsSidebarPool = !!fromParsed && fromParsed[1][0] < 0;
 
-      const dropCheck = checkSubjectDrop(dragKeyFrom, posKeyTo);
+      const dropCheck = checkSubjectDrop(dragKeyFrom, posKeyTo, subjects.get(posKeyTo)?.pinned);
 
       if (!dropCheck.ok) {
         if (dropCheck.reason === "invalid-target") {
