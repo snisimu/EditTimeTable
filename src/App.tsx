@@ -341,6 +341,8 @@ export default function App() {
 
   const [activeSidebarClass, setActiveSidebarClass] = useState<Class>(["1", "A"]);
   const activeSidebarClassRef = useRef<Class>(["1", "A"]);
+  const [pinnedSidebarClass, setPinnedSidebarClass] = useState<Class | null>(null);
+  const pinnedSidebarClassRef = useRef<Class | null>(null);
   const sidebarHoverClassRef = useRef<Class | null>(null);
   const pendingSidebarClassRef = useRef<Class | null>(null);
   const sidebarSwitchTimerRef = useRef<number | null>(null);
@@ -432,6 +434,13 @@ export default function App() {
       const dragCls = parsed[0];
       sidebarClassLockRef.current = { locked: true, cls: dragCls };
 
+      // ピン中の別クラスをドラッグしたらピン解除
+      const pinned = pinnedSidebarClassRef.current;
+      if (pinned && (pinned[0] !== dragCls[0] || pinned[1] !== dragCls[1])) {
+        pinnedSidebarClassRef.current = null;
+        setPinnedSidebarClass(null);
+      }
+
       pendingSidebarClassRef.current = null;
       sidebarHoverClassRef.current = null;
       clearSidebarSwitchTimer();
@@ -469,7 +478,7 @@ export default function App() {
     const draggingNow = dragRef.current != null;
 
     // Track which class row the pointer is on (for Sidebar filtering)
-    if (!draggingNow && !sidebarClassLockRef.current.locked) {
+    if (!draggingNow && !sidebarClassLockRef.current.locked && pinnedSidebarClassRef.current === null) {
       const inTableArea = !!el && !!tableAreaRef.current && tableAreaRef.current.contains(el);
       if (inTableArea) {
         const slotEl = el?.closest("[data-pos-key]") as Element | null;
@@ -1103,6 +1112,20 @@ export default function App() {
     }
   };
 
+  const onClickClassHeader = (cls: Class) => {
+    const pinned = pinnedSidebarClassRef.current;
+    const isSame = pinned && pinned[0] === cls[0] && pinned[1] === cls[1];
+    if (isSame) {
+      pinnedSidebarClassRef.current = null;
+      setPinnedSidebarClass(null);
+    } else {
+      pinnedSidebarClassRef.current = cls;
+      setPinnedSidebarClass(cls);
+      activeSidebarClassRef.current = cls;
+      setActiveSidebarClass(cls);
+    }
+  };
+
   /* App */
   return (
     <Pane
@@ -1127,12 +1150,14 @@ export default function App() {
         drag={drag}
         hoverPosKey={hoverPosKey}
         activeSidebarClass={activeSidebarClass}
+        pinnedSidebarClass={pinnedSidebarClass}
         sidebarInsertMark={sidebarInsertMark}
         onPointerDown={onPointerDown}
         onContextMenu={onContextMenu}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
+        onClickClassHeader={onClickClassHeader}
         sidebarRef={sidebarRef}
         tableAreaRef={tableAreaRef}
         menuRef={menuRef}
@@ -1155,12 +1180,14 @@ const MainArea: React.FC<{
   drag: DragState | null;
   hoverPosKey: string | null;
   activeSidebarClass: Class;
+  pinnedSidebarClass: Class | null;
   sidebarInsertMark: { top: number; height: number } | null;
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
   onPointerMove: any;
   onPointerUp: any;
   onPointerCancel: any;
+  onClickClassHeader: (cls: Class) => void;
   sidebarRef: React.RefObject<HTMLDivElement>;
   tableAreaRef: React.RefObject<HTMLDivElement>;
   menuRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -1173,12 +1200,14 @@ const MainArea: React.FC<{
   const drag = props.drag;
   const hoverPosKey = props.hoverPosKey;
   const activeSidebarClass = props.activeSidebarClass;
+  const pinnedSidebarClass = props.pinnedSidebarClass;
   const sidebarInsertMark = props.sidebarInsertMark;
   const onPointerDown = props.onPointerDown;
   const onContextMenu = props.onContextMenu;
   const onPointerMove = props.onPointerMove;
   const onPointerUp = props.onPointerUp;
   const onPointerCancel = props.onPointerCancel;
+  const onClickClassHeader = props.onClickClassHeader;
   const sidebarRef = props.sidebarRef;
   const tableAreaRef = props.tableAreaRef;
   const menuRef = props.menuRef;
@@ -1571,21 +1600,31 @@ const MainArea: React.FC<{
                 )}
 
                 {/* クラスヘッダ */}
-                <Pane gridColumn={2} gridRow={gridRow}>
-                  <Card
-                    width="100%"
-                    height={heightSlot}
-                    minHeight={heightSlot}
-                    maxHeight={heightSlot}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    padding={majorScale(1)}
-                    backgroundColor={colors.surfaceAlt}
-                  >
-                    <Heading>{row.cls}</Heading>
-                  </Card>
-                </Pane>
+                {(() => {
+                  const rowCls: Class = [row.clsGroup, row.cls];
+                  const isPinned = pinnedSidebarClass !== null &&
+                    pinnedSidebarClass[0] === rowCls[0] &&
+                    pinnedSidebarClass[1] === rowCls[1];
+                  return (
+                    <Pane gridColumn={2} gridRow={gridRow}>
+                      <Card
+                        width="100%"
+                        height={heightSlot}
+                        minHeight={heightSlot}
+                        maxHeight={heightSlot}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        padding={majorScale(1)}
+                        backgroundColor={isPinned ? colors.primarySoft : colors.surfaceAlt}
+                        cursor="pointer"
+                        onClick={() => onClickClassHeader(rowCls)}
+                      >
+                        <Heading>{row.cls}</Heading>
+                      </Card>
+                    </Pane>
+                  );
+                })()}
 
                 {/* 本体セル：slot列だけ Slot を置く / gap列は空白 */}
                 {gridCols.map((col, colIndex) => {
