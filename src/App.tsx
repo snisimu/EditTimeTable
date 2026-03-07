@@ -288,7 +288,7 @@ export default function App() {
   const [subjects, setSubjects] = useState<Map<string, Subject>>(
     new Map(
     [ [ toPosKey(["1", "A"], [0, 0, 0]),
-        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]) },
+        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]), pinned: true },
       ]
     , [ toPosKey(["1", "A"], [0, 0, 1]),
         { id: 2, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 1]) },
