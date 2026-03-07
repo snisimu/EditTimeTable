@@ -176,6 +176,110 @@ const SubjectCardView: React.FC<{
   );
 };
 
+// timetable drop check
+
+type TimetableDropCheck =
+  | { ok: true }
+  | {
+      ok: false;
+      reason:
+        | "invalid-target"
+        | "different-class";
+    };
+
+const checkSubjectDrop = (
+  dragKeyFrom?: string,
+  posKeyTo?: string | null
+): TimetableDropCheck => {
+  if (!posKeyTo) {
+    return { ok: false, reason: "invalid-target" };
+  }
+
+  const toParsed = fromPosKey(posKeyTo);
+  if (!toParsed) {
+    return { ok: false, reason: "invalid-target" };
+  }
+
+  const fromParsed = dragKeyFrom ? fromPosKey(dragKeyFrom) : null;
+
+  // plain sidebar item（posKey でない項目）は timetable に置ける
+  if (!fromParsed) {
+    return { ok: true };
+  }
+
+  // sidebar pool -> timetable も class 一致が必要
+  const fromCls = fromParsed[0];
+  const toCls = toParsed[0];
+  const sameClass =
+    fromCls[0] === toCls[0] &&
+    fromCls[1] === toCls[1];
+
+  if (!sameClass) {
+    return { ok: false, reason: "different-class" };
+  }
+
+  return { ok: true };
+};
+
+const Slot: React.FC<{
+  dragKey: string;
+  text?: string;
+  drag: DragState | null;
+  hoverPosKey: string | null;
+  onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
+}> = ({ dragKey, text, drag, hoverPosKey, onPointerDown, onPointerUp, onContextMenu }) => {
+  const dragging = drag !== null && drag.dragKey === dragKey;
+  const hasSubject = (text ?? "").trim().length > 0;
+
+  const dropState: "none" | "allowed" | "blocked" = (() => {
+    if (!drag) return "none";
+    if (hoverPosKey !== dragKey) return "none";
+    if (drag.dragKey === dragKey) return "none";
+
+    const result = checkSubjectDrop(drag.dragKey, dragKey);
+    return result.ok ? "allowed" : "blocked";
+  })();
+
+  return (
+    <Card
+      data-pos-key={dragKey}
+      onPointerDown={(e) => onPointerDown(dragKey, e)}
+      onPointerUp={onPointerUp}
+      onContextMenu={(e) => onContextMenu(dragKey, e)}
+      height={heightSlot}
+      width={widthSlot}
+      padding={majorScale(1)}
+      elevation={dragging ? 0 : hasSubject ? 1 : 0}
+      background={colors.surface}
+      opacity={dragging ? 0.5 : 1}
+      cursor="grab"
+      style={
+        dropState === "allowed"
+          ? {
+              outline: `2px solid ${colors.primary}`,
+              outlineOffset: 1,
+              borderRadius: 0,
+            }
+          : dropState === "blocked"
+            ? {
+                outline: `2px dashed ${colors.danger}`,
+                outlineOffset: 1,
+                borderRadius: 0,
+                backgroundColor: colors.surfaceAlt,
+              }
+            : undefined
+      }
+    >
+      <SubjectCardView
+        text={text ?? dragKey}
+        color={colors.textMain}
+      />
+    </Card>
+  );
+};
+
 // components
 
 export default function App() {
@@ -900,27 +1004,20 @@ export default function App() {
       const toParsed = fromPosKey(posKeyTo);
       const fromIsSidebarPool = !!fromParsed && fromParsed[1][0] < 0;
 
-      if (!toParsed) {
-        console.log("DROP: posKeyTo is not a timetable posKey", { posKeyTo });
-        return;
-      }
+      const dropCheck = checkSubjectDrop(dragKeyFrom, posKeyTo);
 
-      // Main area rule: subjects can only be replaced/moved within the same class.
-      // (Allow plain sidebar items without posKey to be placed anywhere.)
-      const toIsTimetable = toParsed[1][0] >= 0;
-      if (toIsTimetable && fromParsed) {
-        const fromCls = fromParsed[0];
-        const toCls = toParsed[0];
-        const sameClass = fromCls[0] === toCls[0] && fromCls[1] === toCls[1];
-        if (!sameClass) {
+      if (!dropCheck.ok) {
+        if (dropCheck.reason === "invalid-target") {
+          console.log("DROP: posKeyTo is not a timetable posKey", { posKeyTo });
+        } else if (dropCheck.reason === "different-class") {
           console.log("DROP: different class is not a valid target", {
             from: dragKeyFrom,
             to: posKeyTo,
-            fromCls,
-            toCls,
+            fromCls: fromParsed?.[0],
+            toCls: toParsed?.[0],
           });
-          return;
         }
+        return;
       }
 
       // sidebar item -> timetable slot: place a subject
@@ -1237,69 +1334,6 @@ const MainArea: React.FC<{
     return blockRows;
   });
 
-  const Slot: React.FC<{ dragKey: string; text?: string }> = ({ dragKey, text }) => {
-    const dragging = drag !== null && drag.dragKey === dragKey;
-    const hasSubject = (text ?? "").trim().length > 0;
-    const dropState: "none" | "allowed" | "blocked" = (() => {
-      if (!drag) return "none";
-      if (hoverPosKey !== dragKey) return "none";
-      if (drag.dragKey === dragKey) return "none";
-
-      const toParsed = fromPosKey(dragKey);
-      if (!toParsed) return "allowed";
-
-      // Only enforce the same-class rule for timetable slots.
-      if (toParsed[1][0] < 0) return "allowed";
-
-      const fromKey = drag.dragKey;
-      if (!fromKey) return "allowed";
-
-      const fromParsed = fromPosKey(fromKey);
-      // plain sidebar item (not a posKey) is allowed anywhere
-      if (!fromParsed) return "allowed";
-
-      const sameClass =
-        fromParsed[0][0] === toParsed[0][0] && fromParsed[0][1] === toParsed[0][1];
-      return sameClass ? "allowed" : "blocked";
-    })();
-    return (
-      <Card
-        data-pos-key={dragKey}
-        onPointerDown={(e) => onPointerDown(dragKey, e)}
-        onPointerUp={onPointerUp}
-        onContextMenu={(e) => onContextMenu(dragKey, e)}
-        height={heightSlot}
-        width={widthSlot}
-        padding={majorScale(1)}
-        elevation={dragging ? 0 : hasSubject ? 1 : 0}
-        background={colors.surface}
-        opacity={dragging ? 0.5 : 1}
-        cursor="grab"
-        style={
-          dropState === "allowed"
-            ? {
-                outline: `2px solid ${colors.primary}`,
-                outlineOffset: 1,
-                borderRadius: 0,
-              }
-            : dropState === "blocked"
-              ? {
-                  outline: `2px dashed ${colors.danger}`,
-                  outlineOffset: 1,
-                  borderRadius: 0,
-                  backgroundColor: colors.surfaceAlt,
-                }
-              : undefined
-        }
-      >
-        <SubjectCardView
-          text={text ?? dragKey}
-          color={colors.textMain}
-        />
-      </Card>
-    );
-  }
-
   const ContextMenu: React.FC<{menu: MenuState}> = ({menu}) => {
     useEffect(() => {
       if (!menu.open) return;
@@ -1405,7 +1439,10 @@ const MainArea: React.FC<{
           />
         )}
         {sidebarSubjects.map(({ posKey, subj }) => (
-          <Slot key={posKey} dragKey={posKey} text={subj.name} />
+          <Slot key={posKey} dragKey={posKey} text={subj.name}
+            drag={drag} hoverPosKey={hoverPosKey}
+            onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
+          />
         ))}
       </Pane>
 
@@ -1574,7 +1611,10 @@ const MainArea: React.FC<{
                         );
                         const subj = subjects.get(posKey);
                         const text = subj?.name ?? "";
-                        return <Slot dragKey={posKey} text={text} />;
+                        return <Slot dragKey={posKey} text={text}
+                          drag={drag} hoverPosKey={hoverPosKey}
+                          onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
+                        />;
                       })()}
                     </Pane>
                   );
