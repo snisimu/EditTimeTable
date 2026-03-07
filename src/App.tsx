@@ -551,7 +551,7 @@ export default function App() {
     const isFromPosKey = !!fromParsed;
     const inSidebar = !!el && !!sidebarRef.current && sidebarRef.current.contains(el);
 
-    if (isFromPosKey && inSidebar && sidebarRef.current) {
+    if (isFromPosKey && inSidebar && nextHover === null && sidebarRef.current) {
       const sidebar = sidebarRef.current;
       const nodes = Array.from(sidebar.querySelectorAll("[data-pos-key]")) as HTMLElement[];
       const els = nodes.filter((n) => n.getAttribute("data-pos-key") !== fromKey);
