@@ -290,34 +290,34 @@ export default function App() {
   const [subjects, setSubjects] = useState<Map<string, Subject>>(
     new Map(
     [ [ toPosKey(["1", "A"], [0, 0, 0]),
-        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]), pinned: true },
+        { id: 1, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 0]), pinned: true }
       ]
     , [ toPosKey(["1", "A"], [0, 0, 1]),
-        { id: 2, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 1]) },
+        { id: 2, name: "Math", posKey: toPosKey(["1", "A"], [0, 0, 1]) }
       ]
     , [ toPosKey(["1", "A"], [1, 0, 0]),
-        { id: 3, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 0]) },
+        { id: 3, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 0]) }
       ]
     , [ toPosKey(["1", "A"], [1, 0, 1]),
-        { id: 4, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 1]) },
+        { id: 4, name: "Literature", posKey: toPosKey(["1", "A"], [1, 0, 1]) }
       ]
     , [ toPosKey(["1", "A"], [-1, 0, 0]),
-        { id: 5, name: "History", posKey: toPosKey(["1", "A"], [-1, 0, 0]) },
+        { id: 5, name: "History", posKey: toPosKey(["1", "A"], [-1, 0, 0]) }
       ]
     , [ toPosKey(["1", "A"], [-2, 0, 0]),
-        { id: 6, name: "Art", posKey: toPosKey(["1", "A"], [-2, 0, 0]) },
+        { id: 6, name: "Art", posKey: toPosKey(["1", "A"], [-2, 0, 0]) }
       ]
     , [ toPosKey(["1", "A"], [-3, 0, 0]),
-        { id: 7, name: "Music", posKey: toPosKey(["1", "A"], [-3, 0, 0]) },
+        { id: 7, name: "Music", posKey: toPosKey(["1", "A"], [-3, 0, 0]) }
       ]
     , [ toPosKey(["2", "B"], [1, 0, 0]),
-        { id: 8, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) },
+        { id: 8, name: "Science", posKey: toPosKey(["2", "B"], [1, 0, 0]) }
       ]
     , [ toPosKey(["2", "B"], [1, 1, 0]),
-        { id: 9, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) },
+        { id: 9, name: "Science", posKey: toPosKey(["2", "B"], [1, 1, 0]) }
       ]
     , [ toPosKey(["2", "B"], [-1, 0, 0]),
-        { id: 10, name: "Geography", posKey: toPosKey(["2", "B"], [-1, 0, 0]) },
+        { id: 10, name: "Geography", posKey: toPosKey(["2", "B"], [-1, 0, 0]) }
       ]
     ])
   );
