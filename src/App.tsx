@@ -254,8 +254,8 @@ const Slot: React.FC<{
       height={heightSlot}
       width={widthSlot}
       padding={majorScale(1)}
-      elevation={dragging ? 0 : hasSubject ? 1 : 0}
-      background={colors.surface}
+      elevation={dragging ? 0 : pinned ? 0 : hasSubject ? 1 : 0}
+      background={pinned ? colors.primarySoft : colors.surface}
       opacity={dragging ? 0.5 : 1}
       cursor={pinned ? "default" : "grab"}
       style={
