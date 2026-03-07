@@ -184,7 +184,8 @@ type TimetableDropCheck =
       ok: false;
       reason:
         | "invalid-target"
-        | "different-class";
+        | "different-class"
+        | "etc";
     };
 
 const checkSubjectDrop = (
