@@ -128,7 +128,7 @@ type Subject = {
   id: number;
   name: string;
   pinned?: boolean;
-  posKey?: string;
+  posKey: string;
 };
 const toPosKey = (cls: Class, pos: SlotPosition) =>
   `${cls[0]}|${cls[1]}|${pos[0]}|${pos[1]}|${pos[2]}`;
