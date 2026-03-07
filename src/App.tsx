@@ -1335,7 +1335,7 @@ const MainArea: React.FC<{
       .filter(({ c }) => c.kind !== "day-gap" && c.dayIndex === dayIndex)
       .map(({ i }) => i);
 
-    const start = indices.length ? 3 + Math.min(...indices) : 3;
+    const start = indices.length ? 4 + Math.min(...indices) : 4;
     const span = indices.length;
 
     return { dayLabel, dayIndex, start, span };
@@ -1534,7 +1534,7 @@ const MainArea: React.FC<{
       >
         <Pane
           display="grid"
-          gridTemplateColumns={`${widthGroupHeader}px ${widthClassHeader}px ${gridTemplateColumnsForSlots}`}
+          gridTemplateColumns={`${widthGroupHeader}px ${minorScale(1)}px ${widthClassHeader}px ${gridTemplateColumnsForSlots}`}
           gridAutoRows="auto"
           gap={0}
           alignItems="stretch"
@@ -1543,7 +1543,7 @@ const MainArea: React.FC<{
             const gridRow = rowIndex + 1;
 
             if (row.kind === "block-gap") {
-              const totalCols = 2 + gridCols.length;
+              const totalCols = 3 + gridCols.length;
               return (
                 <Pane
                   key={`block-gap-${row.blockIndex}`}
@@ -1556,7 +1556,7 @@ const MainArea: React.FC<{
             }
 
             if (row.kind === "grade-gap") {
-              const totalCols = 2 + gridCols.length;
+              const totalCols = 3 + gridCols.length;
               return (
                 <Pane
                   key={`grade-gap-${row.blockIndex}-${row.clsGroup}`}
@@ -1569,7 +1569,7 @@ const MainArea: React.FC<{
             }
 
             if (row.kind === "class-gap") {
-              const totalCols = 2 + gridCols.length;
+              const totalCols = 3 + gridCols.length;
               return (
                 <Pane
                   key={`class-gap-${row.blockIndex}-${row.clsGroup}-${row.cls}-${row.idx}`}
@@ -1588,7 +1588,7 @@ const MainArea: React.FC<{
                   <Pane gridColumn={1} gridRow={gridRow}>
                     <Card height={heightDay} /* background="gray200" */ />
                   </Pane>
-                  <Pane gridColumn={2} gridRow={gridRow}>
+                  <Pane gridColumn={3} gridRow={gridRow}>
                     <Card height={heightDay} /* background="gray300" */ />
                   </Pane>
 
@@ -1646,7 +1646,7 @@ const MainArea: React.FC<{
                     pinnedSidebarClass[0] === rowCls[0] &&
                     pinnedSidebarClass[1] === rowCls[1];
                   return (
-                    <Pane gridColumn={2} gridRow={gridRow}>
+                    <Pane gridColumn={3} gridRow={gridRow}>
                       <Card
                         width="100%"
                         height={heightSlot}
@@ -1668,7 +1668,7 @@ const MainArea: React.FC<{
 
                 {/* 本体セル：slot列だけ Slot を置く / gap列は空白 */}
                 {gridCols.map((col, colIndex) => {
-                  const gridColumn = 3 + colIndex;
+                  const gridColumn = 4 + colIndex;
 
                   if (col.kind !== "slot") {
                     return (
