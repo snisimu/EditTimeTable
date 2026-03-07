@@ -225,12 +225,13 @@ const checkSubjectDrop = (
 const Slot: React.FC<{
   dragKey: string;
   text?: string;
+  pinned?: boolean;
   drag: DragState | null;
   hoverPosKey: string | null;
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
-}> = ({ dragKey, text, drag, hoverPosKey, onPointerDown, onPointerUp, onContextMenu }) => {
+}> = ({ dragKey, text, pinned, drag, hoverPosKey, onPointerDown, onPointerUp, onContextMenu }) => {
   const dragging = drag !== null && drag.dragKey === dragKey;
   const hasSubject = (text ?? "").trim().length > 0;
 
@@ -238,6 +239,7 @@ const Slot: React.FC<{
     if (!drag) return "none";
     if (hoverPosKey !== dragKey) return "none";
     if (drag.dragKey === dragKey) return "none";
+    if (pinned) return "blocked";
 
     const result = checkSubjectDrop(drag.dragKey, dragKey);
     return result.ok ? "allowed" : "blocked";
@@ -255,7 +257,7 @@ const Slot: React.FC<{
       elevation={dragging ? 0 : hasSubject ? 1 : 0}
       background={colors.surface}
       opacity={dragging ? 0.5 : 1}
-      cursor="grab"
+      cursor={pinned ? "default" : "grab"}
       style={
         dropState === "allowed"
           ? {
@@ -405,6 +407,7 @@ export default function App() {
     if (!el) return;
 
     if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (subjects.get(dragKey)?.pinned) return;
 
     // console.log("onPointerDown", { label, clientX: e.clientX, clientY: e.clientY });
     e.preventDefault();
@@ -1001,6 +1004,7 @@ export default function App() {
       console.log({ dragKeyFrom, posKeyTo });
 
       if (!posKeyTo) return;
+      if (subjects.get(posKeyTo)?.pinned) return;
 
       const toParsed = fromPosKey(posKeyTo);
       const fromIsSidebarPool = !!fromParsed && fromParsed[1][0] < 0;
@@ -1440,7 +1444,7 @@ const MainArea: React.FC<{
           />
         )}
         {sidebarSubjects.map(({ posKey, subj }) => (
-          <Slot key={posKey} dragKey={posKey} text={subj.name}
+          <Slot key={posKey} dragKey={posKey} text={subj.name} pinned={subj.pinned}
             drag={drag} hoverPosKey={hoverPosKey}
             onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
           />
@@ -1612,7 +1616,7 @@ const MainArea: React.FC<{
                         );
                         const subj = subjects.get(posKey);
                         const text = subj?.name ?? "";
-                        return <Slot dragKey={posKey} text={text}
+                        return <Slot dragKey={posKey} text={text} pinned={subj?.pinned}
                           drag={drag} hoverPosKey={hoverPosKey}
                           onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
                         />;
