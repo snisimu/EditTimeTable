@@ -77,6 +77,7 @@ export const MainArea: React.FC<{
   closeMenu: () => void;
   onTogglePinned: (posKey: string) => void;
   subjects: Map<string, Subject>;
+  highlighted: Map<string, number>;
 }> = (props) => {
 
   const drag = props.drag;
@@ -98,6 +99,7 @@ export const MainArea: React.FC<{
   const setMenu = props.setMenu;
   const closeMenu = props.closeMenu;
   const subjects = props.subjects;
+  const highlighted = props.highlighted;
 
   const sidebarSubjects = Array.from(subjects.entries())
     .map(([posKey, subj]) => ({ posKey, subj, parsed: fromPosKey(posKey) }))
@@ -267,6 +269,7 @@ export const MainArea: React.FC<{
           <Slot key={posKey} dragKey={posKey} text={subj.name} pinned={subj.pinned}
             drag={drag} hoverPosKey={hoverPosKey}
             onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
+            highlightCount={highlighted.get(posKey)}
           />
         ))}
       </Pane>
@@ -449,6 +452,7 @@ export const MainArea: React.FC<{
                         return <Slot dragKey={posKey} text={text} pinned={subj?.pinned}
                           drag={drag} hoverPosKey={hoverPosKey}
                           onPointerDown={onPointerDown} onPointerUp={onPointerUp} onContextMenu={onContextMenu}
+                          highlightCount={highlighted.get(posKey)}
                         />;
                       })()}
                     </Pane>

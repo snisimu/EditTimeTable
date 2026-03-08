@@ -1,0 +1,4 @@
+@keyframes slotHighlight {
+  from { background-color: var(--highlight-color); }
+  to   { background-color: transparent; }
+}
