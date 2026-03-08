@@ -266,7 +266,7 @@ const Slot: React.FC<{
       style={
         dropState === "allowed"
           ? {
-              outline: `2px solid ${colors.primary}`,
+              outline: `2px solid ${colors.success}`,
               outlineOffset: -2,
               borderRadius: 0,
             }
