@@ -42,7 +42,7 @@ function dragUiReducer(state: DragUiState, action: DragUiAction): DragUiState {
 export default function App() {
 
   const [subjects, setSubjects] = useState<Map<string, Subject>>(() => {
-    const names = ["Math", "Science", "Literature", "History", "Art", "Music", "PE", "English", "Geography", "Chemistry"];
+    const names = ["数学", "理科", "国語", "社会", "図工", "音楽", "体育", "英語", "地理", "化学", "コンピュータサイエンス", "家庭科", "道徳", "総合的な学習"];
     const allTableSlots: SlotPosition[] = [
       [0, 0, 0], [0, 0, 1], [0, 1, 0],
       [1, 0, 0], [1, 0, 1], [1, 1, 0],
