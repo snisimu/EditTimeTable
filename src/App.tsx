@@ -98,10 +98,24 @@ export default function App() {
 
     const prev = prevSubjectsRef.current;
     const changedKeys: string[] = [];
+
+    // スワップ検出用：前のstateでの subject id → posKey の逆引きマップ
+    const prevIdToKey = new Map<number, string>();
+    for (const [key, subj] of prev) prevIdToKey.set(subj.id, key);
+
     for (const [key, val] of subjects) {
+      const parsed = fromPosKey(key);
+      const isSidebar = !!parsed && parsed[1][0] < 0;
       const old = prev.get(key);
       if (!old || old.id !== val.id) {
-        changedKeys.push(key);
+        if (isSidebar) {
+          // table area からスワップしてきた subject のみハイライト
+          const prevKey = prevIdToKey.get(val.id);
+          const prevParsed = prevKey ? fromPosKey(prevKey) : null;
+          if (prevParsed && prevParsed[1][0] >= 0) changedKeys.push(key);
+        } else {
+          changedKeys.push(key);
+        }
       }
     }
     prevSubjectsRef.current = subjects;
@@ -753,51 +767,80 @@ export default function App() {
           return next;
         });
       } else {
-        // Timetable-to-sidebar drop: insert into sidebar at the indicated position.
-        const sidebarEls = Array.from(sidebar.querySelectorAll("[data-pos-key]"))
-          .map((n) => ({
-            el: n as HTMLElement,
-            key: (n as HTMLElement).getAttribute("data-pos-key"),
-          }))
-          .filter(({ key }) => {
-            if (!key) return false;
-            const parsed = fromPosKey(key);
-            if (!parsed) return false;
-            const [cls, pos] = parsed;
-            return cls[0] === fromCls[0] && cls[1] === fromCls[1] && pos[0] < 0;
-          });
+        // Timetable-to-sidebar drop.
 
-        let overallInsertIndex = 0;
-        for (let i = 0; i < sidebarEls.length; i++) {
-          const r = sidebarEls[i].el.getBoundingClientRect();
-          if (y < r.top + r.height / 2) {
-            overallInsertIndex = i;
-            break;
+        // Check if dropped directly ON a sidebar item → swap.
+        const droppedOnEl = el.closest("[data-pos-key]") as HTMLElement | null;
+        const droppedOnKey = droppedOnEl?.getAttribute("data-pos-key") ?? null;
+        const droppedOnParsed = droppedOnKey ? fromPosKey(droppedOnKey) : null;
+        const isDropOnSidebarItem =
+          !!droppedOnParsed &&
+          droppedOnParsed[1][0] < 0 &&
+          droppedOnParsed[0][0] === fromCls[0] &&
+          droppedOnParsed[0][1] === fromCls[1];
+
+        if (isDropOnSidebarItem && droppedOnKey) {
+          // Swap: timetable item ↔ sidebar item (keys stay, subjects move).
+          setSubjects((prev) => {
+            const next = new Map(prev);
+            const fromSubj = next.get(dragKeyFrom);
+            if (!fromSubj) return prev;
+            const toSubj = next.get(droppedOnKey);
+            next.set(droppedOnKey, { ...fromSubj, posKey: droppedOnKey });
+            if (toSubj) {
+              next.set(dragKeyFrom, { ...toSubj, posKey: dragKeyFrom });
+            } else {
+              next.delete(dragKeyFrom);
+            }
+            return next;
+          });
+        } else {
+          // Insert into sidebar at the indicated position (dropped in a gap).
+          const sidebarEls = Array.from(sidebar.querySelectorAll("[data-pos-key]"))
+            .map((n) => ({
+              el: n as HTMLElement,
+              key: (n as HTMLElement).getAttribute("data-pos-key"),
+            }))
+            .filter(({ key }) => {
+              if (!key) return false;
+              const parsed = fromPosKey(key);
+              if (!parsed) return false;
+              const [cls, pos] = parsed;
+              return cls[0] === fromCls[0] && cls[1] === fromCls[1] && pos[0] < 0;
+            });
+
+          let overallInsertIndex = 0;
+          for (let i = 0; i < sidebarEls.length; i++) {
+            const r = sidebarEls[i].el.getBoundingClientRect();
+            if (y < r.top + r.height / 2) {
+              overallInsertIndex = i;
+              break;
+            }
+            overallInsertIndex = i + 1;
           }
-          overallInsertIndex = i + 1;
-        }
 
-        setSubjects((prev) => {
-          const next = new Map(prev);
-          const moving = next.get(dragKeyFrom);
-          if (!moving) return prev;
+          setSubjects((prev) => {
+            const next = new Map(prev);
+            const moving = next.get(dragKeyFrom);
+            if (!moving) return prev;
 
-          next.delete(dragKeyFrom);
+            next.delete(dragKeyFrom);
 
-          // Collect existing sidebar items in visual order.
-          const allKeys = sidebarEls.map((e) => e.key as string).filter(Boolean);
-          const existingSubjs = allKeys.map((k) => next.get(k)).filter((s): s is Subject => !!s);
-          for (const key of allKeys) next.delete(key);
+            // Collect existing sidebar items in visual order.
+            const allKeys = sidebarEls.map((e) => e.key as string).filter(Boolean);
+            const existingSubjs = allKeys.map((k) => next.get(k)).filter((s): s is Subject => !!s);
+            for (const key of allKeys) next.delete(key);
 
-          existingSubjs.splice(overallInsertIndex, 0, moving);
+            existingSubjs.splice(overallInsertIndex, 0, moving);
 
-          existingSubjs.forEach((subj, i) => {
-            const newKey = toPosKey(fromCls, [-(i + 1), 0, 0]);
-            next.set(newKey, { ...subj, posKey: newKey });
+            existingSubjs.forEach((subj, i) => {
+              const newKey = toPosKey(fromCls, [-(i + 1), 0, 0]);
+              next.set(newKey, { ...subj, posKey: newKey });
+            });
+
+            return next;
           });
-
-          return next;
-        });
+        }
       }
 
       return;
