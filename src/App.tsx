@@ -267,13 +267,13 @@ const Slot: React.FC<{
         dropState === "allowed"
           ? {
               outline: `2px solid ${colors.primary}`,
-              outlineOffset: 1,
+              outlineOffset: -2,
               borderRadius: 0,
             }
           : dropState === "blocked"
             ? {
                 outline: `2px dashed ${colors.danger}`,
-                outlineOffset: 1,
+                outlineOffset: -2,
                 borderRadius: 0,
                 backgroundColor: colors.surfaceAlt,
               }
