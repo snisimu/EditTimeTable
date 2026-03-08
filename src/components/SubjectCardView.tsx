@@ -10,6 +10,7 @@ export const SubjectCardView: React.FC<{
 }> = ({ text, color }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLSpanElement>(null)
+  const [displayText, setDisplayText] = useState(text)
   const [scaleX, setScaleX] = useState(1)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -19,14 +20,46 @@ export const SubjectCardView: React.FC<{
     const textEl = textRef.current
     if (!container || !textEl) return
     const available = container.clientWidth
+
+    // Measure natural text width
+    textEl.textContent = text
     const natural = textEl.scrollWidth
-    setScaleX(natural > available && natural > 0 ? available / natural : 1)
+
+    if (natural <= available) {
+      setDisplayText(text)
+      setScaleX(1)
+      return
+    }
+
+    const clampedScale = available / natural
+    if (clampedScale >= MIN_SCALE_X) {
+      setDisplayText(text)
+      setScaleX(clampedScale)
+      return
+    }
+
+    // scaleX を MIN_SCALE_X に固定してバイナリサーチで最大文字数を探す
+    const maxWidth = available / MIN_SCALE_X
+    let lo = 0, hi = text.length - 1
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2)
+      textEl.textContent = text.slice(0, mid) + '…'
+      if (textEl.scrollWidth <= maxWidth) {
+        lo = mid
+      } else {
+        hi = mid - 1
+      }
+    }
+    const truncated = text.slice(0, lo) + '…'
+    textEl.textContent = truncated
+    setDisplayText(truncated)
+    setScaleX(MIN_SCALE_X)
   }, [text])
 
-  const useEllipsis = scaleX < MIN_SCALE_X
+  const isEllipsis = displayText !== text
 
   const handleMouseEnter = (e: React.MouseEvent) => {
-    if (!useEllipsis) return
+    if (!isEllipsis) return
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     timerRef.current = window.setTimeout(() => {
       setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
@@ -51,16 +84,7 @@ export const SubjectCardView: React.FC<{
       >
         <span
           ref={textRef}
-          style={useEllipsis ? {
-            fontSize: 'small',
-            color,
-            display: 'block',
-            width: '100%',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            textAlign: 'center',
-          } : {
+          style={{
             whiteSpace: 'nowrap',
             fontSize: 'small',
             color,
@@ -69,7 +93,7 @@ export const SubjectCardView: React.FC<{
             transform: `scaleX(${scaleX})`,
           }}
         >
-          {text}
+          {displayText}
         </span>
       </div>
       {tooltipPos && createPortal(

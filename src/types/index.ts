@@ -8,6 +8,11 @@ export type Subject = {
   posKey: string;
 };
 
+export type Config {
+  // configParallels: number[][];
+  configContinuous: number[][];
+}
+
 export type DragState = {
   pointerId: number;
   toRectX: number;
