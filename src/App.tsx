@@ -83,6 +83,56 @@ export default function App() {
     console.log("subjects(updated)", Array.from(subjects.entries()));
   }, [subjects]);
 
+  // drop後に変化したスロットをハイライト（3秒でフェードアウト）
+  const [highlighted, setHighlighted] = useState<Map<string, number>>(new Map());
+  const highlightTimersRef = useRef<Map<string, number>>(new Map());
+  const prevSubjectsRef = useRef<Map<string, Subject>>(subjects);
+  const isFirstRenderRef = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRenderRef.current) {
+      isFirstRenderRef.current = false;
+      prevSubjectsRef.current = subjects;
+      return;
+    }
+
+    const prev = prevSubjectsRef.current;
+    const changedKeys: string[] = [];
+    for (const [key, val] of subjects) {
+      const old = prev.get(key);
+      if (!old || old.id !== val.id) {
+        changedKeys.push(key);
+      }
+    }
+    prevSubjectsRef.current = subjects;
+
+    if (changedKeys.length === 0) return;
+
+    setHighlighted(prev => {
+      const next = new Map(prev);
+      changedKeys.forEach(k => next.set(k, (next.get(k) ?? 0) + 1));
+      return next;
+    });
+
+    changedKeys.forEach(key => {
+      const existing = highlightTimersRef.current.get(key);
+      if (existing != null) clearTimeout(existing);
+      const tid = window.setTimeout(() => {
+        setHighlighted(prev => {
+          const next = new Map(prev);
+          next.delete(key);
+          return next;
+        });
+        highlightTimersRef.current.delete(key);
+      }, 3000);
+      highlightTimersRef.current.set(key, tid);
+    });
+  }, [subjects]);
+
+  useEffect(() => {
+    return () => { highlightTimersRef.current.forEach(tid => clearTimeout(tid)); };
+  }, []);
+
   const [dragUi, dispatch] = useReducer(dragUiReducer, dragUiInit);
   const { drag, hoverPosKey, sidebarInsertMark } = dragUi;
   const hoverPosKeyRef = useRef<string | null>(null);
@@ -889,6 +939,7 @@ export default function App() {
         setMenu={setMenu}
         closeMenu={closeMenu}
         subjects={subjects}
+      highlighted={highlighted}
       />
 
       <Ghost

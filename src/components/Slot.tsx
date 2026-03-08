@@ -13,7 +13,8 @@ export const Slot: React.FC<{
   onPointerDown: (dragKey: string, e: React.PointerEvent<HTMLDivElement>) => void;
   onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
   onContextMenu: (dragKey: string, e: React.MouseEvent<HTMLDivElement>) => void;
-}> = ({ dragKey, text, pinned, drag, hoverPosKey, onPointerDown, onPointerUp, onContextMenu }) => {
+  highlightCount?: number;
+}> = ({ dragKey, text, pinned, drag, hoverPosKey, onPointerDown, onPointerUp, onContextMenu, highlightCount }) => {
   const dragging = drag !== null && drag.dragKey === dragKey;
   const hasSubject = (text ?? "").trim().length > 0;
 
@@ -39,6 +40,8 @@ export const Slot: React.FC<{
       background={pinned ? colors.surfaceAlt : colors.surface}
       opacity={dragging ? 0.5 : 1}
       cursor={pinned || !hasSubject ? "default" : "grab"}
+      position="relative"
+      overflow="hidden"
       style={
         dropState === "allowed"
           ? {
@@ -56,6 +59,18 @@ export const Slot: React.FC<{
             : undefined
       }
     >
+      {highlightCount != null && (
+        <div
+          key={highlightCount}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            animation: 'slotHighlight 3s ease-out forwards',
+            ['--highlight-color' as string]: colors.primarySoft,
+          }}
+        />
+      )}
       <SubjectCardView
         text={text ?? dragKey}
         color={colors.textMain}
