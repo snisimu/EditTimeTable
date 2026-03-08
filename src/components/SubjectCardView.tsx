@@ -1,4 +1,5 @@
 import { useRef, useLayoutEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const MIN_SCALE_X = 0.65
 
@@ -9,6 +10,7 @@ export const SubjectCardView: React.FC<{
   const containerRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLSpanElement>(null)
   const [scaleX, setScaleX] = useState(1)
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -21,34 +23,64 @@ export const SubjectCardView: React.FC<{
 
   const useEllipsis = scaleX < MIN_SCALE_X
 
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (!useEllipsis) return
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
+  }
+
+  const handleMouseLeave = () => setTooltipPos(null)
+
   return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-    >
-      <span
-        ref={textRef}
-        title={useEllipsis ? text : undefined}
-        style={useEllipsis ? {
-          fontSize: 'small',
-          color,
-          display: 'block',
-          width: '100%',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          textAlign: 'center',
-        } : {
-          whiteSpace: 'nowrap',
-          fontSize: 'small',
-          color,
-          display: 'inline-block',
-          transformOrigin: 'center',
-          transform: `scaleX(${scaleX})`,
-        }}
+    <>
+      <div
+        ref={containerRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
       >
-        {text}
-      </span>
-    </div>
+        <span
+          ref={textRef}
+          style={useEllipsis ? {
+            fontSize: 'small',
+            color,
+            display: 'block',
+            width: '100%',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            textAlign: 'center',
+          } : {
+            whiteSpace: 'nowrap',
+            fontSize: 'small',
+            color,
+            display: 'inline-block',
+            transformOrigin: 'center',
+            transform: `scaleX(${scaleX})`,
+          }}
+        >
+          {text}
+        </span>
+      </div>
+      {tooltipPos && createPortal(
+        <div style={{
+          position: 'fixed',
+          left: tooltipPos.x,
+          top: tooltipPos.y - 6,
+          transform: 'translate(-50%, -100%)',
+          backgroundColor: '#0F172A',
+          color: '#FFFFFF',
+          padding: '3px 8px',
+          borderRadius: 4,
+          fontSize: 'small',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+          zIndex: 9999,
+        }}>
+          {text}
+        </div>,
+        document.body
+      )}
+    </>
   )
 }
