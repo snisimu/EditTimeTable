@@ -2,6 +2,7 @@ import { useRef, useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 const MIN_SCALE_X = 0.65
+const TOOLTIP_DELAY_MS = 300
 
 export const SubjectCardView: React.FC<{
   text: string;
@@ -11,6 +12,7 @@ export const SubjectCardView: React.FC<{
   const textRef = useRef<HTMLSpanElement>(null)
   const [scaleX, setScaleX] = useState(1)
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
+  const timerRef = useRef<number | null>(null)
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -26,10 +28,18 @@ export const SubjectCardView: React.FC<{
   const handleMouseEnter = (e: React.MouseEvent) => {
     if (!useEllipsis) return
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
+    timerRef.current = window.setTimeout(() => {
+      setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top })
+    }, TOOLTIP_DELAY_MS)
   }
 
-  const handleMouseLeave = () => setTooltipPos(null)
+  const handleMouseLeave = () => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    setTooltipPos(null)
+  }
 
   return (
     <>
