@@ -2,6 +2,7 @@ import
   { useRef
   , useState
   , useEffect
+  , useReducer
   } from 'react'
 import
   { Pane
@@ -14,6 +15,29 @@ import { checkSubjectDrop } from './logic/dropCheck'
 import { seededShuffle, normalizeGroup } from './logic/normalize'
 import { MainArea } from './components/MainArea'
 import { Ghost } from './components/Ghost'
+
+type DragUiState = {
+  drag: DragState | null
+  hoverPosKey: string | null
+  sidebarInsertMark: { top: number; height: number } | null
+}
+
+type DragUiAction =
+  | { type: 'DRAG_START'; payload: DragState }
+  | { type: 'DRAG_END' }
+  | { type: 'SET_HOVER'; posKey: string | null }
+  | { type: 'SET_INSERT_MARK'; mark: { top: number; height: number } | null }
+
+const dragUiInit: DragUiState = { drag: null, hoverPosKey: null, sidebarInsertMark: null }
+
+function dragUiReducer(state: DragUiState, action: DragUiAction): DragUiState {
+  switch (action.type) {
+    case 'DRAG_START':      return { ...state, drag: action.payload }
+    case 'DRAG_END':        return { drag: null, hoverPosKey: null, sidebarInsertMark: null }
+    case 'SET_HOVER':       return { ...state, hoverPosKey: action.posKey }
+    case 'SET_INSERT_MARK': return { ...state, sidebarInsertMark: action.mark }
+  }
+}
 
 export default function App() {
 
@@ -59,11 +83,9 @@ export default function App() {
     console.log("subjects(updated)", Array.from(subjects.entries()));
   }, [subjects]);
 
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const [hoverPosKey, setHoverPosKey] = useState<string | null>(null);
+  const [dragUi, dispatch] = useReducer(dragUiReducer, dragUiInit);
+  const { drag, hoverPosKey, sidebarInsertMark } = dragUi;
   const hoverPosKeyRef = useRef<string | null>(null);
-
-  const [sidebarInsertMark, setSidebarInsertMark] = useState<{ top: number; height: number } | null>(null);
   const sidebarInsertMarkRef = useRef<{ top: number; height: number } | null>(null);
 
   const [activeSidebarClass, setActiveSidebarClass] = useState<Class>(["1", "A"]);
@@ -188,7 +210,7 @@ export default function App() {
       dragKey,
       subjectName,
     };
-    setDrag(nextDrag);
+    dispatch({ type: 'DRAG_START', payload: nextDrag });
     dragRef.current = nextDrag; // ★ 即座に最新化（useEffect待ちしない）
 
     pointerRef.current = { x: e.clientX, y: e.clientY }; // ★ stateじゃない
@@ -277,7 +299,7 @@ export default function App() {
 
     if (hoverPosKeyRef.current !== nextHover) {
       hoverPosKeyRef.current = nextHover;
-      setHoverPosKey(nextHover);
+      dispatch({ type: 'SET_HOVER', posKey: nextHover });
     }
 
     // Sidebar insert indicator (any drag -> sidebar insert)
@@ -353,7 +375,7 @@ export default function App() {
       if (!wouldChange) {
         if (sidebarInsertMarkRef.current !== null) {
           sidebarInsertMarkRef.current = null;
-          setSidebarInsertMark(null);
+          dispatch({ type: 'SET_INSERT_MARK', mark: null });
         }
       } else {
         const nextMark = { top: markTop, height: markHeight };
@@ -361,13 +383,13 @@ export default function App() {
         const changed = !cur || cur.top !== nextMark.top || cur.height !== nextMark.height;
         if (changed) {
           sidebarInsertMarkRef.current = nextMark;
-          setSidebarInsertMark(nextMark);
+          dispatch({ type: 'SET_INSERT_MARK', mark: nextMark });
         }
       }
     } else {
       if (sidebarInsertMarkRef.current !== null) {
         sidebarInsertMarkRef.current = null;
-        setSidebarInsertMark(null);
+        dispatch({ type: 'SET_INSERT_MARK', mark: null });
       }
     }
     // console.log("onPointerMove", { eclientY: e.clientY });
@@ -375,7 +397,7 @@ export default function App() {
 
   const endDrag = () => {
     if (drag?.el) drag.el.style.cursor = "grab";
-    setDrag(null);
+    dispatch({ type: 'DRAG_END' });
     dragRef.current = null;
 
     sidebarClassLockRef.current = { locked: false, cls: null };
@@ -384,10 +406,7 @@ export default function App() {
     clearSidebarSwitchTimer();
 
     hoverPosKeyRef.current = null;
-    setHoverPosKey(null);
-
     sidebarInsertMarkRef.current = null;
-    setSidebarInsertMark(null);
 
     document.body.style.cursor = "";
     stopAutoScroll();
