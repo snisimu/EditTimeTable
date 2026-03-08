@@ -1,5 +1,7 @@
 import { useRef, useLayoutEffect, useState } from 'react'
 
+const MIN_SCALE_X = 0.65
+
 export const SubjectCardView: React.FC<{
   text: string;
   color?: string;
@@ -17,6 +19,8 @@ export const SubjectCardView: React.FC<{
     setScaleX(natural > available && natural > 0 ? available / natural : 1)
   }, [text])
 
+  const useEllipsis = scaleX < MIN_SCALE_X
+
   return (
     <div
       ref={containerRef}
@@ -24,7 +28,17 @@ export const SubjectCardView: React.FC<{
     >
       <span
         ref={textRef}
-        style={{
+        title={useEllipsis ? text : undefined}
+        style={useEllipsis ? {
+          fontSize: 'small',
+          color,
+          display: 'block',
+          width: '100%',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          textAlign: 'center',
+        } : {
           whiteSpace: 'nowrap',
           fontSize: 'small',
           color,
