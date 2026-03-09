@@ -86,6 +86,7 @@ export const SubjectCardView: React.FC<{
           ref={textRef}
           style={{
             whiteSpace: 'nowrap',
+            fontFamily: 'Meiryo, "Helvetica Neue", Helvetica, Arial, sans-serif',
             fontSize: 'small',
             color,
             display: 'inline-block',
@@ -106,6 +107,7 @@ export const SubjectCardView: React.FC<{
           color: '#FFFFFF',
           padding: '3px 8px',
           borderRadius: 4,
+          fontFamily: 'Meiryo, "Helvetica Neue", Helvetica, Arial, sans-serif',
           fontSize: 'small',
           whiteSpace: 'nowrap',
           pointerEvents: 'none',
