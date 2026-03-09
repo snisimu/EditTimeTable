@@ -977,7 +977,7 @@ export default function App() {
       onPointerCancel={onPointerCancel}
       display="flex"
       flexDirection="column"
-      height="97vh"
+      height="100vh"
     >
       {/* Top Pane */}
       <Pane
