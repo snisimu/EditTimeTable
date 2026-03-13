@@ -983,7 +983,7 @@ export default function App() {
       <Pane
         background={colors.primarySoft}
         padding={16}
-        elevation={2}
+        elevation={1}
         display="flex"
         alignItems="center"
       >
